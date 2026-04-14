@@ -1,16 +1,24 @@
 import { useRef, useEffect, useState, useImperativeHandle, forwardRef } from 'react';
 import { renderDamascus } from '../engine/render.js';
+import { BASE_WIDTH, BASE_HEIGHT } from '../recipe/schema.js';
 
 const C = {
   amber: '#c8a040',
   border: '#221e18',
+  dim: '#443c34',
 };
+
+const MAX_DISPLAY_WIDTH = 960;
 
 const Canvas = forwardRef(function Canvas({ recipe, onRenderTime, onBusyChange }, ref) {
   const canvasRef = useRef(null);
   const [busy, setBusy] = useState(false);
 
   useImperativeHandle(ref, () => canvasRef.current);
+
+  const res = recipe.resolution || 1;
+  const pixelW = BASE_WIDTH * res;
+  const pixelH = BASE_HEIGHT * res;
 
   useEffect(() => {
     setBusy(true);
@@ -26,12 +34,22 @@ const Canvas = forwardRef(function Canvas({ recipe, onRenderTime, onBusyChange }
   }, [recipe]);
 
   return (
-    <div style={{ position: 'relative', border: `1px solid ${C.border}` }}>
+    <div style={{
+      position: 'relative',
+      border: `1px solid ${C.border}`,
+      maxWidth: MAX_DISPLAY_WIDTH,
+      width: '100%',
+    }}>
       <canvas
         ref={canvasRef}
-        width={640}
-        height={256}
-        style={{ width: '100%', display: 'block' }}
+        width={pixelW}
+        height={pixelH}
+        style={{
+          width: '100%',
+          height: 'auto',
+          display: 'block',
+          imageRendering: res >= 2 ? 'auto' : 'auto',
+        }}
       />
       {busy && (
         <div style={{
@@ -49,6 +67,17 @@ const Canvas = forwardRef(function Canvas({ recipe, onRenderTime, onBusyChange }
           FORGING\u2026
         </div>
       )}
+      <div style={{
+        position: 'absolute',
+        bottom: 4,
+        right: 6,
+        fontSize: 9,
+        color: C.dim,
+        fontFamily: 'monospace',
+        pointerEvents: 'none',
+      }}>
+        {pixelW}&times;{pixelH}
+      </div>
     </div>
   );
 });

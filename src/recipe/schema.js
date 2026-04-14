@@ -1,7 +1,12 @@
+// Base canvas dimensions — resolution multiplier scales these
+export const BASE_WIDTH = 640;
+export const BASE_HEIGHT = 256;
+
 export const DEFAULT_RECIPE = {
   version: 1,
   seed: 42,
   pattern: 'wild',
+  resolution: 1,
   deformations: [],
   warp: {
     turbulence: 0.75,

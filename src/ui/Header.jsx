@@ -19,7 +19,13 @@ const btn = {
   fontFamily: 'monospace',
 };
 
-export default function Header({ recipe, onPresetChange, onSeedChange, onRandomSeed, onDownload, onCopyRecipe }) {
+const RESOLUTIONS = [
+  { value: 1, label: '1\u00D7 (640\u00D7256)' },
+  { value: 2, label: '2\u00D7 (1280\u00D7512)' },
+  { value: 4, label: '4\u00D7 (2560\u00D71024)' },
+];
+
+export default function Header({ recipe, onPresetChange, onSeedChange, onRandomSeed, onDownload, onCopyRecipe, onResolutionChange }) {
   return (
     <div style={{
       display: 'flex',
@@ -76,6 +82,21 @@ export default function Header({ recipe, onPresetChange, onSeedChange, onRandomS
           />
         </div>
         <button style={btn} onClick={onRandomSeed}>RNG</button>
+        {/* Resolution selector */}
+        <select
+          value={recipe.resolution || 1}
+          onChange={e => onResolutionChange(parseInt(e.target.value, 10))}
+          style={{
+            ...btn,
+            background: '#111',
+            color: C.text,
+            padding: '3px 6px',
+          }}
+        >
+          {RESOLUTIONS.map(r => (
+            <option key={r.value} value={r.value}>{r.label}</option>
+          ))}
+        </select>
         <button style={btn} onClick={onDownload}>PNG &darr;</button>
         <button style={btn} onClick={onCopyRecipe}>COPY RECIPE</button>
       </div>

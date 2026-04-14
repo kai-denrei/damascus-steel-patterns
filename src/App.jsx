@@ -52,6 +52,10 @@ export default function App() {
     navigator.clipboard.writeText(JSON.stringify(recipe, null, 2));
   }, [recipe]);
 
+  const handleResolutionChange = useCallback((resolution) => {
+    setRecipe(prev => ({ ...prev, resolution }));
+  }, []);
+
   const handleDeformationChange = useCallback((deformations) => {
     setRecipe(prev => ({ ...prev, deformations, pattern: 'custom' }));
   }, []);
@@ -64,12 +68,14 @@ export default function App() {
     <div style={{
       background: '#0b0b0b',
       minHeight: '100vh',
-      padding: 16,
+      padding: '16px 24px',
       fontFamily: 'monospace',
       color: '#d8d4cc',
       display: 'flex',
       flexDirection: 'column',
       gap: 14,
+      maxWidth: 1000,
+      margin: '0 auto',
     }}>
       <Header
         recipe={recipe}
@@ -78,6 +84,7 @@ export default function App() {
         onRandomSeed={handleRandomSeed}
         onDownload={handleDownload}
         onCopyRecipe={handleCopyRecipe}
+        onResolutionChange={handleResolutionChange}
       />
 
       <Canvas
