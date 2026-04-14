@@ -10,6 +10,76 @@ const C = {
 
 const MAX_DISPLAY_WIDTH = 960;
 
+// Braille helix loader — two intertwined sine waves like damascus layers
+// Ported from Braille Lab loaders (genHelix)
+const BRAILLE_DOT_MAP = [[1, 8], [2, 16], [4, 32], [64, 128]];
+
+function gridToBraille(grid) {
+  const rows = grid.length, cols = grid[0].length;
+  const charCount = Math.ceil(cols / 2);
+  let result = '';
+  for (let c = 0; c < charCount; c++) {
+    let code = 0x2800;
+    for (let r = 0; r < 4 && r < rows; r++) {
+      for (let d = 0; d < 2; d++) {
+        const col = c * 2 + d;
+        if (col < cols && grid[r][col]) code |= BRAILLE_DOT_MAP[r][d];
+      }
+    }
+    result += String.fromCodePoint(code);
+  }
+  return result;
+}
+
+function generateHelixFrames() {
+  const W = 8, H = 4, totalFrames = 16, frames = [];
+  for (let f = 0; f < totalFrames; f++) {
+    const g = Array.from({ length: H }, () => Array(W).fill(false));
+    for (let c = 0; c < W; c++) {
+      const phase = (f + c) * (Math.PI / 4);
+      const y1 = Math.round((Math.sin(phase) + 1) / 2 * (H - 1));
+      const y2 = Math.round((Math.sin(phase + Math.PI) + 1) / 2 * (H - 1));
+      g[y1][c] = true;
+      g[y2][c] = true;
+    }
+    frames.push(gridToBraille(g));
+  }
+  return frames;
+}
+
+const HELIX_FRAMES = generateHelixFrames();
+
+function BrailleLoader() {
+  const [frame, setFrame] = useState(0);
+
+  useEffect(() => {
+    const tid = setInterval(() => {
+      setFrame(f => (f + 1) % HELIX_FRAMES.length);
+    }, 80);
+    return () => clearInterval(tid);
+  }, []);
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 6,
+    }}>
+      <span style={{ fontSize: 28, lineHeight: 1, letterSpacing: '0.05em' }}>
+        {HELIX_FRAMES[frame]}
+      </span>
+      <span style={{
+        fontSize: 10,
+        letterSpacing: '0.25em',
+        opacity: 0.8,
+      }}>
+        FORGING
+      </span>
+    </div>
+  );
+}
+
 const Canvas = forwardRef(function Canvas({ recipe, onRenderTime, onBusyChange }, ref) {
   const canvasRef = useRef(null);
   const [busy, setBusy] = useState(false);
@@ -48,7 +118,6 @@ const Canvas = forwardRef(function Canvas({ recipe, onRenderTime, onBusyChange }
           width: '100%',
           height: 'auto',
           display: 'block',
-          imageRendering: res >= 2 ? 'auto' : 'auto',
         }}
       />
       {busy && (
@@ -59,12 +128,10 @@ const Canvas = forwardRef(function Canvas({ recipe, onRenderTime, onBusyChange }
           alignItems: 'center',
           justifyContent: 'center',
           background: 'rgba(11,11,11,0.65)',
-          fontSize: 11,
           color: C.amber,
-          letterSpacing: '0.25em',
           fontFamily: 'monospace',
         }}>
-          FORGING\u2026
+          <BrailleLoader />
         </div>
       )}
       <div style={{
