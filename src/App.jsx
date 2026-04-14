@@ -8,6 +8,27 @@ import Controls from './ui/Controls.jsx';
 import DeformationStack from './ui/DeformationStack.jsx';
 import Gallery from './ui/Gallery.jsx';
 import StatusBar from './ui/StatusBar.jsx';
+import SwordPreview from './ui/SwordPreview.jsx';
+
+const C = {
+  amber: '#c8a040',
+  muted: '#706860',
+  dim: '#443c34',
+  border: '#221e18',
+};
+
+const TAB_STYLE = (active) => ({
+  padding: '6px 16px',
+  fontSize: 10,
+  letterSpacing: '0.15em',
+  fontFamily: 'monospace',
+  background: 'transparent',
+  border: 'none',
+  borderBottom: active ? `2px solid ${C.amber}` : '2px solid transparent',
+  color: active ? C.amber : C.dim,
+  cursor: 'pointer',
+  transition: 'color 0.15s, border-color 0.15s',
+});
 
 export default function App() {
   const [recipe, setRecipe] = useState(() => {
@@ -16,6 +37,7 @@ export default function App() {
   });
   const [renderTime, setRenderTime] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState('pattern');
   const canvasRef = useRef(null);
 
   // Sync recipe → URL hash (debounced)
@@ -87,34 +109,56 @@ export default function App() {
         onResolutionChange={handleResolutionChange}
       />
 
-      <Canvas
-        ref={canvasRef}
-        recipe={recipe}
-        onRenderTime={setRenderTime}
-        onBusyChange={setBusy}
-      />
+      {/* Tab bar */}
+      <div style={{
+        display: 'flex',
+        gap: 0,
+        borderBottom: `1px solid ${C.border}`,
+      }}>
+        <button style={TAB_STYLE(tab === 'pattern')} onClick={() => setTab('pattern')}>
+          PATTERN
+        </button>
+        <button style={TAB_STYLE(tab === 'swords')} onClick={() => setTab('swords')}>
+          BLADES
+        </button>
+      </div>
 
-      <Gallery
-        recipe={recipe}
-        onLoad={handleGalleryLoad}
-        canvasRef={canvasRef}
-      />
+      {tab === 'pattern' && (
+        <>
+          <Canvas
+            ref={canvasRef}
+            recipe={recipe}
+            onRenderTime={setRenderTime}
+            onBusyChange={setBusy}
+          />
 
-      <Controls
-        recipe={recipe}
-        onChange={setRecipe}
-      />
+          <Gallery
+            recipe={recipe}
+            onLoad={handleGalleryLoad}
+            canvasRef={canvasRef}
+          />
 
-      <DeformationStack
-        deformations={recipe.deformations}
-        onChange={handleDeformationChange}
-      />
+          <Controls
+            recipe={recipe}
+            onChange={setRecipe}
+          />
 
-      <StatusBar
-        recipe={recipe}
-        renderTime={renderTime}
-        busy={busy}
-      />
+          <DeformationStack
+            deformations={recipe.deformations}
+            onChange={handleDeformationChange}
+          />
+
+          <StatusBar
+            recipe={recipe}
+            renderTime={renderTime}
+            busy={busy}
+          />
+        </>
+      )}
+
+      {tab === 'swords' && (
+        <SwordPreview recipe={recipe} />
+      )}
     </div>
   );
 }

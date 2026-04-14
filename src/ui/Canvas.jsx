@@ -49,13 +49,39 @@ function generateHelixFrames() {
 
 const HELIX_FRAMES = generateHelixFrames();
 
+// Inject CSS animation keyframes once (compositor-thread animation survives JS blocking)
+const STYLE_ID = 'braille-loader-css';
+if (typeof document !== 'undefined' && !document.getElementById(STYLE_ID)) {
+  const style = document.createElement('style');
+  style.id = STYLE_ID;
+  style.textContent = `
+    @keyframes braille-pulse {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.08); }
+    }
+    @keyframes braille-glow {
+      0%, 100% { text-shadow: 0 0 4px rgba(200,160,64,0.2); }
+      50% { text-shadow: 0 0 12px rgba(200,160,64,0.6); }
+    }
+    .braille-loader-text {
+      animation: braille-pulse 0.8s ease-in-out infinite, braille-glow 0.8s ease-in-out infinite;
+      will-change: opacity, transform;
+    }
+    .braille-loader-label {
+      animation: braille-pulse 1.2s ease-in-out infinite;
+      will-change: opacity;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 function BrailleLoader() {
   const [frame, setFrame] = useState(0);
 
   useEffect(() => {
     const tid = setInterval(() => {
       setFrame(f => (f + 1) % HELIX_FRAMES.length);
-    }, 80);
+    }, 50); // 20fps — fast enough to show movement in the debounce window
     return () => clearInterval(tid);
   }, []);
 
@@ -64,16 +90,27 @@ function BrailleLoader() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      gap: 6,
+      gap: 8,
     }}>
-      <span style={{ fontSize: 28, lineHeight: 1, letterSpacing: '0.05em' }}>
+      <span
+        className="braille-loader-text"
+        style={{
+          fontSize: 32,
+          lineHeight: 1,
+          letterSpacing: '0.08em',
+          color: C.amber,
+        }}
+      >
         {HELIX_FRAMES[frame]}
       </span>
-      <span style={{
-        fontSize: 10,
-        letterSpacing: '0.25em',
-        opacity: 0.8,
-      }}>
+      <span
+        className="braille-loader-label"
+        style={{
+          fontSize: 10,
+          letterSpacing: '0.3em',
+          color: C.amber,
+        }}
+      >
         FORGING
       </span>
     </div>
@@ -90,6 +127,9 @@ const Canvas = forwardRef(function Canvas({ recipe, onRenderTime, onBusyChange }
   const pixelW = BASE_WIDTH * res;
   const pixelH = BASE_HEIGHT * res;
 
+  // Longer debounce at higher resolutions so the animation gets screen time
+  const debounce = res >= 4 ? 400 : res >= 2 ? 250 : 180;
+
   useEffect(() => {
     setBusy(true);
     if (onBusyChange) onBusyChange(true);
@@ -99,7 +139,7 @@ const Canvas = forwardRef(function Canvas({ recipe, onRenderTime, onBusyChange }
       if (onRenderTime) onRenderTime(elapsed);
       setBusy(false);
       if (onBusyChange) onBusyChange(false);
-    }, 180);
+    }, debounce);
     return () => clearTimeout(tid);
   }, [recipe]);
 
@@ -127,24 +167,25 @@ const Canvas = forwardRef(function Canvas({ recipe, onRenderTime, onBusyChange }
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'rgba(11,11,11,0.65)',
-          color: C.amber,
+          background: 'rgba(11,11,11,0.7)',
           fontFamily: 'monospace',
         }}>
           <BrailleLoader />
         </div>
       )}
-      <div style={{
-        position: 'absolute',
-        bottom: 4,
-        right: 6,
-        fontSize: 9,
-        color: C.dim,
-        fontFamily: 'monospace',
-        pointerEvents: 'none',
-      }}>
-        {pixelW}&times;{pixelH}
-      </div>
+      {!busy && (
+        <div style={{
+          position: 'absolute',
+          bottom: 4,
+          right: 6,
+          fontSize: 9,
+          color: C.dim,
+          fontFamily: 'monospace',
+          pointerEvents: 'none',
+        }}>
+          {pixelW}&times;{pixelH}
+        </div>
+      )}
     </div>
   );
 });
