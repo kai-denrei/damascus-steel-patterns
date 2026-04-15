@@ -33,7 +33,10 @@ export function renderDamascusVector(canvas, recipe) {
   }
 
   // --- Extract contours (padded → all closed) ---
-  const contours = extractContours(matField, gH, gW, 0.5, W, H, 3);
+  const contours = extractContours(matField, gH, gW, 0.5, W, H, {
+    smoothIter: 4,
+    rdpEpsilon: 0.5,
+  });
 
   // --- Vector fill ---
   ctx.fillStyle = `rgb(${alloy.dark[0]},${alloy.dark[1]},${alloy.dark[2]})`;

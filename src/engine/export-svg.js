@@ -53,9 +53,9 @@ export function generateSVG(recipe, width = 1920, height = 768) {
   const perm = buildPerm(recipe.seed);
   const alloy = ALLOYS[recipe.layers.alloy];
 
-  // Grid density: ~300 columns gives good detail for 1920px output
-  const gW = Math.min(400, Math.ceil(width * 0.2));
-  const gH = Math.min(160, Math.ceil(height * 0.2));
+  // Higher grid density → more accurate contours. RDP simplification keeps file size down.
+  const gW = Math.min(800, Math.ceil(width * 0.4));
+  const gH = Math.min(320, Math.ceil(height * 0.4));
   const matField = new Float32Array(gW * gH);
 
   for (let gy = 0; gy < gH; gy++) {
@@ -69,7 +69,11 @@ export function generateSVG(recipe, width = 1920, height = 768) {
   }
 
   // Extract contours — padding forces all contours closed
-  const contours = extractContours(matField, gH, gW, 0.5, width, height, 3);
+  // smoothIter=5 for very smooth curves, rdpEpsilon=1.0 keeps file compact
+  const contours = extractContours(matField, gH, gW, 0.5, width, height, {
+    smoothIter: 5,
+    rdpEpsilon: 1.0,
+  });
 
   // Build compound fill path (all contours as subpaths, one <path> element)
   const fillParts = [];
