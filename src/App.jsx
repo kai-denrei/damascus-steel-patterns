@@ -83,6 +83,10 @@ export default function App() {
     setRecipe(prev => ({ ...prev, supersample }));
   }, []);
 
+  const handleVectorModeChange = useCallback((vectorMode) => {
+    setRecipe(prev => ({ ...prev, vectorMode }));
+  }, []);
+
   const handleDeformationChange = useCallback((deformations) => {
     setRecipe(prev => ({ ...prev, deformations, pattern: 'custom' }));
   }, []);
@@ -113,6 +117,7 @@ export default function App() {
         onCopyRecipe={handleCopyRecipe}
         onResolutionChange={handleResolutionChange}
         onSupersampleChange={handleSupersampleChange}
+        onVectorModeChange={handleVectorModeChange}
       />
 
       {/* Tab bar */}

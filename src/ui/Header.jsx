@@ -26,7 +26,7 @@ const RESOLUTIONS = [
   { value: 8, label: '8\u00D7 (5120\u00D72048)' },
 ];
 
-export default function Header({ recipe, onPresetChange, onSeedChange, onRandomSeed, onDownload, onCopyRecipe, onResolutionChange, onSupersampleChange }) {
+export default function Header({ recipe, onPresetChange, onSeedChange, onRandomSeed, onDownload, onCopyRecipe, onResolutionChange, onSupersampleChange, onVectorModeChange }) {
   return (
     <div style={{
       display: 'flex',
@@ -98,7 +98,18 @@ export default function Header({ recipe, onPresetChange, onSeedChange, onRandomS
             <option key={r.value} value={r.value}>{r.label}</option>
           ))}
         </select>
-        {/* SSAA toggle */}
+        {/* Render mode toggles */}
+        <button
+          style={{
+            ...btn,
+            color: recipe.vectorMode ? C.amber : C.dim,
+            borderColor: recipe.vectorMode ? C.amber : C.dim,
+          }}
+          onClick={() => onVectorModeChange(!recipe.vectorMode)}
+          title="Vector contour rendering — smooth anti-aliased curves via marching squares + Chaikin smoothing"
+        >
+          VEC
+        </button>
         <button
           style={{
             ...btn,
@@ -106,7 +117,7 @@ export default function Header({ recipe, onPresetChange, onSeedChange, onRandomS
             borderColor: recipe.supersample ? C.amber : C.dim,
           }}
           onClick={() => onSupersampleChange(!recipe.supersample)}
-          title="2\u00D72 supersampling anti-aliasing — smoother layer edges, ~3\u00D7 slower"
+          title="2\u00D72 supersampling anti-aliasing — smoother layer edges, ~3\u00D7 slower (pixel mode only)"
         >
           SSAA
         </button>

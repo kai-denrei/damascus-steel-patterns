@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useImperativeHandle, forwardRef } from 'react';
 import { renderDamascus } from '../engine/render.js';
+import { renderDamascusVector } from '../engine/render-vector.js';
 import { BASE_WIDTH, BASE_HEIGHT } from '../recipe/schema.js';
 
 const C = {
@@ -136,7 +137,8 @@ const Canvas = forwardRef(function Canvas({ recipe, onRenderTime, onBusyChange }
     if (onBusyChange) onBusyChange(true);
     const tid = setTimeout(() => {
       if (!canvasRef.current) return;
-      const elapsed = renderDamascus(canvasRef.current, recipe);
+      const render = recipe.vectorMode ? renderDamascusVector : renderDamascus;
+      const elapsed = render(canvasRef.current, recipe);
       if (onRenderTime) onRenderTime(elapsed);
       setBusy(false);
       if (onBusyChange) onBusyChange(false);
