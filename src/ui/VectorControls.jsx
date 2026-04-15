@@ -6,9 +6,10 @@ const C = {
 };
 
 export const DEFAULT_VECTOR_SETTINGS = {
-  levels: 8,
-  detail: 3,
+  levels: 6,
+  detail: 2,
   smoothing: 3,
+  blur: 3,
   grain: 50,
   vignette: 30,
   colorVariation: 50,
@@ -64,6 +65,16 @@ export default function VectorControls({ settings, onChange }) {
         max={6}
         step={1}
         tooltip="Contour curve smoothing radius. Higher = rounder curves but may merge nearby features. Lower = more faithful to the original pattern."
+      />
+
+      <UnicodeSlider
+        label="blur"
+        value={settings.blur}
+        onChange={v => set('blur', v)}
+        min={0}
+        max={8}
+        step={0.5}
+        tooltip="SVG Gaussian blur softens band transitions into smooth gradients. 0 = sharp bands, 3+ = smooth color flow."
       />
 
       <UnicodeSlider
