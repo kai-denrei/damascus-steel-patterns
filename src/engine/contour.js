@@ -199,10 +199,52 @@ export function padField(field, rows, cols) {
   return { padded, padW, padH };
 }
 
-// Full pipeline: field → pad → march → chain → scale
-// With a fine grid, the raw polyline is already smooth (the noise field is smooth).
-// No Chaikin or RDP needed — cubic Bezier conversion in the SVG/Canvas step
-// naturally smooths between the dense points.
+// Smooth polyline coordinates with iterated box filter (approximates Gaussian).
+// Removes marching-squares staircase artifacts while preserving curve shape.
+function smoothPolylineCoords(points, radius, iterations) {
+  const n = points.length;
+  if (n < 3) return points;
+
+  const closed = Math.abs(points[0][0] - points[n - 1][0]) < 1 &&
+                 Math.abs(points[0][1] - points[n - 1][1]) < 1;
+
+  let pts = points;
+  for (let iter = 0; iter < iterations; iter++) {
+    const next = [];
+    for (let i = 0; i < n; i++) {
+      let sx = 0, sy = 0, count = 0;
+      for (let j = -radius; j <= radius; j++) {
+        let idx;
+        if (closed) {
+          idx = ((i + j) % n + n) % n;
+        } else {
+          idx = Math.max(0, Math.min(n - 1, i + j));
+        }
+        sx += pts[idx][0];
+        sy += pts[idx][1];
+        count++;
+      }
+      next.push([sx / count, sy / count]);
+    }
+    pts = next;
+  }
+  return pts;
+}
+
+// Uniform subsample: keep every Kth point, plus always keep first and last
+function subsample(points, step) {
+  if (points.length <= step * 2) return points;
+  const result = [points[0]];
+  for (let i = step; i < points.length - 1; i += step) {
+    result.push(points[i]);
+  }
+  result.push(points[points.length - 1]);
+  return result;
+}
+
+// Full pipeline: field → pad → march → chain → scale → smooth → subsample
+// The smoothing removes marching-squares staircase artifacts.
+// The subsampling gives Bezier tangent computation proper long-range context.
 export function extractContours(field, rows, cols, threshold, outW, outH) {
   const { padded, padW, padH } = padField(field, rows, cols);
   const segments = marchingSquares(padded, padH, padW, threshold);
@@ -213,6 +255,17 @@ export function extractContours(field, rows, cols, threshold, outW, outH) {
 
   return polylines
     .filter(pl => pl.length >= 3)
-    .map(pl => pl.map(([x, y]) => [(x - 1) * sx, (y - 1) * sy]))
+    .map(pl => {
+      // Shift from padded coords, scale to output
+      const scaled = pl.map(([x, y]) => [(x - 1) * sx, (y - 1) * sy]);
+
+      // Smooth: 3 iterations of box filter with radius 4
+      // removes staircase while preserving curve shape
+      const smoothed = smoothPolylineCoords(scaled, 4, 3);
+
+      // Subsample: keep every 3rd point so Bezier tangents
+      // see the actual curve direction, not local zigzag
+      return subsample(smoothed, 3);
+    })
     .filter(pl => pl.length >= 3);
 }
