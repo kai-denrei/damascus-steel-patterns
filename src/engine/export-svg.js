@@ -1,42 +1,131 @@
-// Export damascus pattern as SVG with multi-threshold color gradient contours
+// Export damascus pattern as SVG with isoband color gradients
 //
-// Pipeline:
-//   1. Sample material field on grid (continuous values 0–1)
-//   2. Extract contours at N threshold levels (topographic approach)
-//   3. Stack filled contour bands bottom-up: each level overpaints previous
-//   4. Catmull-Rom → cubic Bezier for smooth curves
-//   5. SVG feTurbulence filter for resolution-independent grain
-//   6. Radial gradient vignette overlay
+// Isobands: non-overlapping band polygons between threshold pairs.
+// No stacking interference — each band covers exactly its range.
+// Smoothed with box filter, simplified with Visvalingam-Whyatt.
+// SVG paths use relative coordinates for compact output.
 
 import { buildPerm } from './noise.js';
 import { ALLOYS } from './alloys.js';
 import { sampleLayerField } from './sample.js';
 import { sig } from './shade.js';
-import { extractContours } from './contour.js';
+import { extractIsoband, chainIsobandSegments } from './isobands.js';
+import { padField } from './contour.js';
 
-// Seeded RNG for per-band color variation
+const DEFAULTS = { levels: 8, detail: 3, smoothing: 3, grain: 50, vignette: 30, colorVariation: 50, minSize: 30 };
+
+// Seeded RNG
 function seededRand(seed) {
   let s = seed >>> 0;
-  return () => {
-    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-    return (s >>> 0) / 0x100000000;
-  };
+  return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 0x100000000; };
 }
 
-// Convert polyline to SVG cubic Bezier path
-function polylineToBezierPath(points) {
-  if (points.length < 2) return '';
+// Smooth polyline coordinates with iterated box filter
+function smoothPoly(points, radius, iterations) {
   const n = points.length;
+  if (n < 3) return points;
+  const closed = Math.abs(points[0][0] - points[n - 1][0]) < 1 &&
+                 Math.abs(points[0][1] - points[n - 1][1]) < 1;
+  let pts = points;
+  for (let iter = 0; iter < iterations; iter++) {
+    const next = [];
+    for (let i = 0; i < n; i++) {
+      let sx = 0, sy = 0, count = 0;
+      for (let j = -radius; j <= radius; j++) {
+        const idx = closed ? ((i + j) % n + n) % n : Math.max(0, Math.min(n - 1, i + j));
+        sx += pts[idx][0]; sy += pts[idx][1]; count++;
+      }
+      next.push([sx / count, sy / count]);
+    }
+    pts = next;
+  }
+  return pts;
+}
 
-  const dx = points[0][0] - points[n - 1][0];
-  const dy = points[0][1] - points[n - 1][1];
-  const closed = Math.abs(dx) < 2 && Math.abs(dy) < 2;
+// Visvalingam-Whyatt simplification — removes points by triangle area
+function simplifyVW(points, minArea) {
+  if (points.length <= 3) return points;
+  const pts = points.map((p, i) => ({ x: p[0], y: p[1], idx: i, removed: false }));
+  const n = pts.length;
 
-  let d = `M${points[0][0].toFixed(2)},${points[0][1].toFixed(2)}`;
+  const triArea = (a, b, c) =>
+    Math.abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)) * 0.5;
+
+  // Compute initial areas
+  const areas = new Float64Array(n);
+  areas[0] = Infinity;
+  areas[n - 1] = Infinity;
+  for (let i = 1; i < n - 1; i++) areas[i] = triArea(pts[i - 1], pts[i], pts[i + 1]);
+
+  // Iteratively remove point with smallest area
+  let remaining = n;
+  while (remaining > 3) {
+    let minIdx = -1, minVal = Infinity;
+    for (let i = 1; i < n - 1; i++) {
+      if (pts[i].removed) continue;
+      if (areas[i] < minVal) { minVal = areas[i]; minIdx = i; }
+    }
+    if (minIdx === -1 || minVal >= minArea) break;
+
+    pts[minIdx].removed = true;
+    remaining--;
+
+    // Recompute neighbors
+    let prev = minIdx - 1;
+    while (prev >= 0 && pts[prev].removed) prev--;
+    let next = minIdx + 1;
+    while (next < n && pts[next].removed) next++;
+
+    if (prev > 0) {
+      let pp = prev - 1;
+      while (pp >= 0 && pts[pp].removed) pp--;
+      if (pp >= 0 && next < n) areas[prev] = triArea(pts[pp], pts[prev], pts[next]);
+    }
+    if (next < n - 1) {
+      let nn = next + 1;
+      while (nn < n && pts[nn].removed) nn++;
+      if (nn < n && prev >= 0) areas[next] = triArea(pts[prev], pts[next], pts[nn]);
+    }
+  }
+
+  return pts.filter(p => !p.removed).map(p => [p.x, p.y]);
+}
+
+// Polyline arc length
+function polyLength(points) {
+  let len = 0;
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i][0] - points[i - 1][0];
+    const dy = points[i][1] - points[i - 1][1];
+    len += Math.sqrt(dx * dx + dy * dy);
+  }
+  return len;
+}
+
+// Subsample every Kth point
+function subsample(points, step) {
+  if (points.length <= step * 2) return points;
+  const result = [points[0]];
+  for (let i = step; i < points.length - 1; i += step) result.push(points[i]);
+  result.push(points[points.length - 1]);
+  return result;
+}
+
+// Convert polyline to SVG path using relative cubic Bezier (compact)
+function polyToRelBezier(points) {
+  const n = points.length;
+  if (n < 2) return '';
+  const closed = Math.abs(points[0][0] - points[n - 1][0]) < 2 &&
+                 Math.abs(points[0][1] - points[n - 1][1]) < 2;
+
+  const P = 1; // decimal places
+  let d = `M${points[0][0].toFixed(P)},${points[0][1].toFixed(P)}`;
 
   if (n === 2) {
-    d += `L${points[1][0].toFixed(2)},${points[1][1].toFixed(2)}`;
-    return closed ? d + 'Z' : d;
+    const dx = points[1][0] - points[0][0];
+    const dy = points[1][1] - points[0][1];
+    d += `l${dx.toFixed(P)},${dy.toFixed(P)}`;
+    return closed ? d + 'z' : d;
   }
 
   const get = closed
@@ -45,27 +134,21 @@ function polylineToBezierPath(points) {
 
   const T = 0.3;
   const count = closed ? n : n - 1;
+  let curX = points[0][0], curY = points[0][1];
+
   for (let i = 0; i < count; i++) {
     const p0 = get(i - 1), p1 = get(i), p2 = get(i + 1), p3 = get(i + 2);
     const c1x = p1[0] + (p2[0] - p0[0]) * T;
     const c1y = p1[1] + (p2[1] - p0[1]) * T;
     const c2x = p2[0] - (p3[0] - p1[0]) * T;
     const c2y = p2[1] - (p3[1] - p1[1]) * T;
-    d += `C${c1x.toFixed(2)},${c1y.toFixed(2)},${c2x.toFixed(2)},${c2y.toFixed(2)},${p2[0].toFixed(2)},${p2[1].toFixed(2)}`;
+    // Relative offsets from current position
+    d += `c${(c1x - curX).toFixed(P)},${(c1y - curY).toFixed(P)},${(c2x - curX).toFixed(P)},${(c2y - curY).toFixed(P)},${(p2[0] - curX).toFixed(P)},${(p2[1] - curY).toFixed(P)}`;
+    curX = p2[0]; curY = p2[1];
   }
 
-  return closed ? d + 'Z' : d;
+  return closed ? d + 'z' : d;
 }
-
-// Interpolate color between dark and bright with optional variation
-function bandColor(dark, bright, t, variation) {
-  return [0, 1, 2].map(c => {
-    const base = dark[c] + (bright[c] - dark[c]) * t;
-    return Math.max(0, Math.min(255, Math.round(base + variation * 6)));
-  });
-}
-
-const DEFAULTS = { levels: 10, detail: 3, smoothing: 3, grain: 60, vignette: 30, colorVariation: 50, minSize: 30 };
 
 export function generateSVG(recipe, width = 1920, height = 768, settings = {}) {
   const opts = { ...DEFAULTS, ...settings };
@@ -73,103 +156,103 @@ export function generateSVG(recipe, width = 1920, height = 768, settings = {}) {
   const alloy = ALLOYS[recipe.layers.alloy];
   const rand = seededRand(recipe.seed + 7919);
 
-  // Grid density scales with detail setting: 1=320, 2=640, 3=960, 4=1280, 5=1600
+  // Grid density from detail setting
   const gW = 320 * opts.detail;
   const gH = 128 * opts.detail;
 
-  // Sample the raw layer field (pre-sigmoid) for multi-threshold extraction
-  const rawField = new Float32Array(gW * gH);
+  // Sample material field
+  const matField = new Float32Array(gW * gH);
   for (let gy = 0; gy < gH; gy++) {
     for (let gx = 0; gx < gW; gx++) {
       const bx = (gx + 0.5) / gW;
       const by = (gy + 0.5) / gH;
       const bz = recipe.crossSection.depth + bx * Math.tan(recipe.crossSection.angle) * 0.35;
       const t = sampleLayerField(perm, bx, by, bz, recipe.warp, recipe.layers.count, recipe.deformations);
-      // Apply sigmoid to get material value 0–1
-      rawField[gy * gW + gx] = sig(t, alloy.sh);
+      matField[gy * gW + gx] = sig(t, alloy.sh);
     }
   }
 
-  // Multi-threshold contour extraction
-  const NUM_LEVELS = opts.levels;
-  const levels = [];
-  for (let i = 0; i < NUM_LEVELS; i++) {
-    const threshold = (i + 0.5) / NUM_LEVELS;
-    levels.push({
-      threshold,
-      contours: extractContours(rawField, gH, gW, threshold, width, height, opts.smoothing, opts.minSize),
-    });
-  }
+  // Pad field so bands at edges are closed
+  const { padded, padW, padH } = padField(matField, gH, gW);
 
-  // Build SVG
-  const recipeStr = JSON.stringify(recipe)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Scale factors: padded grid coords → SVG coords (account for +1 padding offset)
+  const sx = width / gW;
+  const sy = height / gH;
 
-  const darkRGB = alloy.dark;
-  const brightRGB = alloy.bright;
+  // Build isobands for each threshold pair
+  const NUM = opts.levels;
+  const dark = alloy.dark;
+  const bright = alloy.bright;
+  const variationScale = opts.colorVariation / 50;
 
-  // Background: darkest color
-  const bgColor = bandColor(darkRGB, brightRGB, 0, 0);
-
+  // Background
+  const bgR = dark[0], bgG = dark[1], bgB = dark[2];
   let pathElements = '';
 
-  // Stack levels bottom-up: each overwrites previous, building gradient
-  for (let li = 0; li < levels.length; li++) {
-    const { threshold, contours } = levels[li];
-    if (contours.length === 0) continue;
+  for (let li = 0; li < NUM; li++) {
+    const lo = li / NUM;
+    const hi = (li + 1) / NUM;
+    const midT = (lo + hi) / 2;
 
-    // Color for this level — interpolated with seeded variation
-    const variationScale = opts.colorVariation / 50; // 0 = none, 1 = default, 2 = max
-    const variation = (rand() - 0.5) * 2 * variationScale;
-    const color = bandColor(darkRGB, brightRGB, threshold, variation);
-    const rgb = `rgb(${color[0]},${color[1]},${color[2]})`;
+    // Extract isoband on padded field
+    const rawSegments = extractIsoband(padded, padH, padW, lo, hi);
+    const polygons = chainIsobandSegments(rawSegments, 0.01);
 
-    // Compound path for all contours at this level
-    const parts = [];
-    for (const pl of contours) {
-      if (pl.length < 4) continue;
-      const pathStr = polylineToBezierPath(pl);
-      if (pathStr) parts.push(pathStr);
+    // Process polygons: shift, scale, smooth, simplify, filter
+    const processed = polygons
+      .map(poly => {
+        // Shift from padded coords, scale to SVG
+        let pts = poly.map(([x, y]) => [(x - 1) * sx, (y - 1) * sy]);
+        // Smooth
+        pts = smoothPoly(pts, opts.smoothing, 2);
+        // Subsample
+        pts = subsample(pts, 2);
+        // Visvalingam-Whyatt simplification (area threshold in SVG px²)
+        pts = simplifyVW(pts, 2.0);
+        return pts;
+      })
+      .filter(pts => pts.length >= 3)
+      .filter(pts => polyLength(pts) >= opts.minSize);
+
+    if (processed.length === 0) continue;
+
+    // Band color with seeded variation
+    const v = (rand() - 0.5) * 2 * variationScale * 6;
+    const r = Math.max(0, Math.min(255, Math.round(dark[0] + (bright[0] - dark[0]) * midT + v)));
+    const g = Math.max(0, Math.min(255, Math.round(dark[1] + (bright[1] - dark[1]) * midT + v)));
+    const b = Math.max(0, Math.min(255, Math.round(dark[2] + (bright[2] - dark[2]) * midT + v)));
+
+    // Compound path for this band
+    const pathData = processed.map(pts => polyToRelBezier(pts)).filter(Boolean).join('');
+    if (pathData) {
+      pathElements += `<path d="${pathData}" fill="rgb(${r},${g},${b})" fill-rule="evenodd"/>\n`;
     }
-    if (parts.length === 0) continue;
-
-    pathElements += `<path d="${parts.join(' ')}" fill="${rgb}" fill-rule="evenodd" stroke="none"/>\n`;
   }
 
-  // SVG filters — controlled by settings
-  const grainFreq = (0.4 + opts.grain * 0.01).toFixed(2); // 0.4–1.4
-  const grainOpacity = (opts.grain / 100).toFixed(2);
+  // SVG filters
+  const grainFreq = (0.4 + opts.grain * 0.01).toFixed(2);
   const vigOpacity = (opts.vignette / 100).toFixed(2);
-
   const useGrain = opts.grain > 0;
   const useVignette = opts.vignette > 0;
 
   let defs = '<defs>\n';
   if (useGrain) {
-    defs += `  <filter id="grain" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="${grainFreq}" numOctaves="4" seed="${recipe.seed}" result="noise"/>
-    <feColorMatrix type="saturate" values="0" in="noise" result="grey"/>
-    <feComposite in="grey" in2="SourceGraphic" operator="in" result="masked"/>
-    <feBlend mode="multiply" in="SourceGraphic" in2="masked"/>
-  </filter>\n`;
+    defs += `<filter id="g" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="${grainFreq}" numOctaves="3" seed="${recipe.seed}"/><feColorMatrix type="saturate" values="0"/><feComposite operator="in" in2="SourceGraphic"/><feBlend mode="multiply" in="SourceGraphic"/></filter>\n`;
   }
   if (useVignette) {
-    defs += `  <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
-    <stop offset="0%" stop-color="black" stop-opacity="0"/>
-    <stop offset="100%" stop-color="black" stop-opacity="${vigOpacity}"/>
-  </radialGradient>\n`;
+    defs += `<radialGradient id="v" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="${vigOpacity}"/></radialGradient>\n`;
   }
   defs += '</defs>';
 
-  const grainAttr = useGrain ? ' filter="url(#grain)"' : '';
+  const recipeStr = JSON.stringify(recipe).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
-<desc>Damascus s${recipe.seed} ${recipe.pattern} | ${recipeStr}</desc>
+<desc>${recipeStr}</desc>
 ${defs}
-<g${grainAttr}>
-<rect width="${width}" height="${height}" fill="rgb(${bgColor[0]},${bgColor[1]},${bgColor[2]})"/>
-${pathElements}</g>${useVignette ? `\n<rect width="${width}" height="${height}" fill="url(#vignette)"/>` : ''}
+<g${useGrain ? ' filter="url(#g)"' : ''}>
+<rect width="${width}" height="${height}" fill="rgb(${bgR},${bgG},${bgB})"/>
+${pathElements}</g>${useVignette ? `\n<rect width="${width}" height="${height}" fill="url(#v)"/>` : ''}
 </svg>`;
 }
 

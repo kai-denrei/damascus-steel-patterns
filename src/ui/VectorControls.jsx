@@ -6,10 +6,10 @@ const C = {
 };
 
 export const DEFAULT_VECTOR_SETTINGS = {
-  levels: 10,
+  levels: 8,
   detail: 3,
   smoothing: 3,
-  grain: 60,
+  grain: 50,
   vignette: 30,
   colorVariation: 50,
   minSize: 30,
