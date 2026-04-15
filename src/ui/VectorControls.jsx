@@ -7,7 +7,8 @@ const C = {
 
 export const DEFAULT_VECTOR_SETTINGS = {
   levels: 10,
-  smoothing: 4,
+  detail: 3,
+  smoothing: 3,
   grain: 60,
   vignette: 30,
   colorVariation: 50,
@@ -46,13 +47,23 @@ export default function VectorControls({ settings, onChange }) {
       />
 
       <UnicodeSlider
+        label="detail"
+        value={settings.detail}
+        onChange={v => set('detail', v)}
+        min={1}
+        max={5}
+        step={1}
+        tooltip="Grid sampling density. Higher = more accurate contours matching the pixel render, but larger SVG. 1=320px, 3=960px, 5=1600px wide grid."
+      />
+
+      <UnicodeSlider
         label="smoothing"
         value={settings.smoothing}
         onChange={v => set('smoothing', v)}
         min={1}
-        max={8}
+        max={6}
         step={1}
-        tooltip="Contour curve smoothing radius. Higher = rounder curves, lower = tighter to grid."
+        tooltip="Contour curve smoothing radius. Higher = rounder curves but may merge nearby features. Lower = more faithful to the original pattern."
       />
 
       <UnicodeSlider

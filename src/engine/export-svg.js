@@ -65,7 +65,7 @@ function bandColor(dark, bright, t, variation) {
   });
 }
 
-const DEFAULTS = { levels: 10, smoothing: 4, grain: 60, vignette: 30, colorVariation: 50, minSize: 30 };
+const DEFAULTS = { levels: 10, detail: 3, smoothing: 3, grain: 60, vignette: 30, colorVariation: 50, minSize: 30 };
 
 export function generateSVG(recipe, width = 1920, height = 768, settings = {}) {
   const opts = { ...DEFAULTS, ...settings };
@@ -73,8 +73,9 @@ export function generateSVG(recipe, width = 1920, height = 768, settings = {}) {
   const alloy = ALLOYS[recipe.layers.alloy];
   const rand = seededRand(recipe.seed + 7919);
 
-  const gW = 640;
-  const gH = 256;
+  // Grid density scales with detail setting: 1=320, 2=640, 3=960, 4=1280, 5=1600
+  const gW = 320 * opts.detail;
+  const gH = 128 * opts.detail;
 
   // Sample the raw layer field (pre-sigmoid) for multi-threshold extraction
   const rawField = new Float32Array(gW * gH);
