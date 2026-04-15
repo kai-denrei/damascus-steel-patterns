@@ -199,8 +199,11 @@ export function padField(field, rows, cols) {
   return { padded, padW, padH };
 }
 
-// Full pipeline: sample field → pad → march → chain → smooth → simplify → scale
-export function extractContours(field, rows, cols, threshold, outW, outH, { smoothIter = 4, rdpEpsilon = 0.8 } = {}) {
+// Full pipeline: field → pad → march → chain → scale
+// With a fine grid, the raw polyline is already smooth (the noise field is smooth).
+// No Chaikin or RDP needed — cubic Bezier conversion in the SVG/Canvas step
+// naturally smooths between the dense points.
+export function extractContours(field, rows, cols, threshold, outW, outH) {
   const { padded, padW, padH } = padField(field, rows, cols);
   const segments = marchingSquares(padded, padH, padW, threshold);
   const polylines = chainSegments(segments, 0.01);
@@ -210,20 +213,6 @@ export function extractContours(field, rows, cols, threshold, outW, outH, { smoo
 
   return polylines
     .filter(pl => pl.length >= 3)
-    .map(pl => {
-      // Shift from padded coords to original, then scale to output
-      const shifted = pl.map(([x, y]) => [(x - 1) * sx, (y - 1) * sy]);
-
-      // Smooth
-      const smoothed = smoothChaikin(shifted, smoothIter);
-
-      // Simplify — epsilon in output coordinate units
-      const isClosed = Math.abs(smoothed[0][0] - smoothed[smoothed.length - 1][0]) < sx &&
-                       Math.abs(smoothed[0][1] - smoothed[smoothed.length - 1][1]) < sy;
-
-      return isClosed
-        ? simplifyClosedRDP(smoothed, rdpEpsilon)
-        : simplifyRDP(smoothed, rdpEpsilon);
-    })
+    .map(pl => pl.map(([x, y]) => [(x - 1) * sx, (y - 1) * sy]))
     .filter(pl => pl.length >= 3);
 }

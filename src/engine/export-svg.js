@@ -23,10 +23,10 @@ function polylineToBezierPath(points) {
   const dy = points[0][1] - points[n - 1][1];
   const closed = Math.abs(dx) < 2 && Math.abs(dy) < 2;
 
-  let d = `M${points[0][0].toFixed(1)},${points[0][1].toFixed(1)}`;
+  let d = `M${points[0][0].toFixed(2)},${points[0][1].toFixed(2)}`;
 
   if (n === 2) {
-    d += `L${points[1][0].toFixed(1)},${points[1][1].toFixed(1)}`;
+    d += `L${points[1][0].toFixed(2)},${points[1][1].toFixed(2)}`;
     return closed ? d + 'Z' : d;
   }
 
@@ -43,7 +43,7 @@ function polylineToBezierPath(points) {
     const c1y = p1[1] + (p2[1] - p0[1]) * T;
     const c2x = p2[0] - (p3[0] - p1[0]) * T;
     const c2y = p2[1] - (p3[1] - p1[1]) * T;
-    d += `C${c1x.toFixed(1)},${c1y.toFixed(1)},${c2x.toFixed(1)},${c2y.toFixed(1)},${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    d += `C${c1x.toFixed(2)},${c1y.toFixed(2)},${c2x.toFixed(2)},${c2y.toFixed(2)},${p2[0].toFixed(2)},${p2[1].toFixed(2)}`;
   }
 
   return closed ? d + 'Z' : d;
@@ -53,9 +53,10 @@ export function generateSVG(recipe, width = 1920, height = 768) {
   const perm = buildPerm(recipe.seed);
   const alloy = ALLOYS[recipe.layers.alloy];
 
-  // Higher grid density → more accurate contours. RDP simplification keeps file size down.
-  const gW = Math.min(800, Math.ceil(width * 0.4));
-  const gH = Math.min(320, Math.ceil(height * 0.4));
+  // Fine grid — raw marching squares polyline is smooth since the noise field is smooth.
+  // Bezier conversion handles the rest.
+  const gW = 640;
+  const gH = 256;
   const matField = new Float32Array(gW * gH);
 
   for (let gy = 0; gy < gH; gy++) {
@@ -69,11 +70,7 @@ export function generateSVG(recipe, width = 1920, height = 768) {
   }
 
   // Extract contours — padding forces all contours closed
-  // smoothIter=5 for very smooth curves, rdpEpsilon=1.0 keeps file compact
-  const contours = extractContours(matField, gH, gW, 0.5, width, height, {
-    smoothIter: 5,
-    rdpEpsilon: 1.0,
-  });
+  const contours = extractContours(matField, gH, gW, 0.5, width, height);
 
   // Build compound fill path (all contours as subpaths, one <path> element)
   const fillParts = [];

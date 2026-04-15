@@ -33,22 +33,35 @@ export function renderDamascusVector(canvas, recipe) {
   }
 
   // --- Extract contours (padded → all closed) ---
-  const contours = extractContours(matField, gH, gW, 0.5, W, H, {
-    smoothIter: 4,
-    rdpEpsilon: 0.5,
-  });
+  const contours = extractContours(matField, gH, gW, 0.5, W, H);
 
   // --- Vector fill ---
   ctx.fillStyle = `rgb(${alloy.dark[0]},${alloy.dark[1]},${alloy.dark[2]})`;
   ctx.fillRect(0, 0, W, H);
 
-  // Build compound bright path
+  // Build compound bright path using Catmull-Rom → cubic Bezier for smooth curves
   const brightPath = new Path2D();
   for (const pl of contours) {
     if (pl.length < 4) continue;
+    const n = pl.length;
+    const closed = Math.abs(pl[0][0] - pl[n - 1][0]) < W * 0.01 &&
+                   Math.abs(pl[0][1] - pl[n - 1][1]) < H * 0.01;
+
     brightPath.moveTo(pl[0][0], pl[0][1]);
-    for (let i = 1; i < pl.length; i++) {
-      brightPath.lineTo(pl[i][0], pl[i][1]);
+
+    const get = closed
+      ? (i) => pl[((i % n) + n) % n]
+      : (i) => pl[Math.max(0, Math.min(n - 1, i))];
+
+    const T = 0.3;
+    const count = closed ? n : n - 1;
+    for (let i = 0; i < count; i++) {
+      const p0 = get(i - 1), p1 = get(i), p2 = get(i + 1), p3 = get(i + 2);
+      const c1x = p1[0] + (p2[0] - p0[0]) * T;
+      const c1y = p1[1] + (p2[1] - p0[1]) * T;
+      const c2x = p2[0] - (p3[0] - p1[0]) * T;
+      const c2y = p2[1] - (p3[1] - p1[1]) * T;
+      brightPath.bezierCurveTo(c1x, c1y, c2x, c2y, p2[0], p2[1]);
     }
     brightPath.closePath();
   }
