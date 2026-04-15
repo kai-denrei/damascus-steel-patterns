@@ -11,6 +11,7 @@ export const DEFAULT_VECTOR_SETTINGS = {
   grain: 60,
   vignette: 30,
   colorVariation: 50,
+  minSize: 30,
 };
 
 export default function VectorControls({ settings, onChange }) {
@@ -85,6 +86,16 @@ export default function VectorControls({ settings, onChange }) {
         step={5}
         fmt={v => `${v}%`}
         tooltip="Per-band color randomness. Adds organic imperfection to the color gradient."
+      />
+
+      <UnicodeSlider
+        label="min size"
+        value={settings.minSize}
+        onChange={v => set('minSize', v)}
+        min={0}
+        max={200}
+        step={5}
+        tooltip="Minimum contour length in pixels. Removes small stray lines and fragments. 0 = keep all, higher = cleaner pattern."
       />
     </div>
   );

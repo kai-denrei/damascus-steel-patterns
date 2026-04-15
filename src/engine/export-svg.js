@@ -65,7 +65,7 @@ function bandColor(dark, bright, t, variation) {
   });
 }
 
-const DEFAULTS = { levels: 10, smoothing: 4, grain: 60, vignette: 30, colorVariation: 50 };
+const DEFAULTS = { levels: 10, smoothing: 4, grain: 60, vignette: 30, colorVariation: 50, minSize: 30 };
 
 export function generateSVG(recipe, width = 1920, height = 768, settings = {}) {
   const opts = { ...DEFAULTS, ...settings };
@@ -96,7 +96,7 @@ export function generateSVG(recipe, width = 1920, height = 768, settings = {}) {
     const threshold = (i + 0.5) / NUM_LEVELS;
     levels.push({
       threshold,
-      contours: extractContours(rawField, gH, gW, threshold, width, height, opts.smoothing),
+      contours: extractContours(rawField, gH, gW, threshold, width, height, opts.smoothing, opts.minSize),
     });
   }
 
