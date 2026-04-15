@@ -26,7 +26,7 @@ const RESOLUTIONS = [
   { value: 8, label: '8\u00D7 (5120\u00D72048)' },
 ];
 
-export default function Header({ recipe, onPresetChange, onSeedChange, onRandomSeed, onDownload, onCopyRecipe, onResolutionChange, onSupersampleChange, onVectorModeChange }) {
+export default function Header({ recipe, onPresetChange, onSeedChange, onRandomSeed, onDownload, onDownloadSVG, onCopyRecipe, onResolutionChange, onSupersampleChange, onVectorModeChange }) {
   return (
     <div style={{
       display: 'flex',
@@ -122,6 +122,7 @@ export default function Header({ recipe, onPresetChange, onSeedChange, onRandomS
           SSAA
         </button>
         <button style={btn} onClick={onDownload}>PNG &darr;</button>
+        <button style={btn} onClick={onDownloadSVG}>SVG &darr;</button>
         <button style={btn} onClick={onCopyRecipe}>COPY RECIPE</button>
       </div>
     </div>

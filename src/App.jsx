@@ -10,6 +10,7 @@ import Gallery from './ui/Gallery.jsx';
 import StatusBar from './ui/StatusBar.jsx';
 import SwordPreview from './ui/SwordPreview.jsx';
 import Explore from './ui/Explore.jsx';
+import { downloadSVG } from './engine/export-svg.js';
 
 const C = {
   amber: '#c8a040',
@@ -71,6 +72,10 @@ export default function App() {
     a.click();
   }, [recipe]);
 
+  const handleDownloadSVG = useCallback(() => {
+    downloadSVG(recipe);
+  }, [recipe]);
+
   const handleCopyRecipe = useCallback(() => {
     navigator.clipboard.writeText(JSON.stringify(recipe, null, 2));
   }, [recipe]);
@@ -114,6 +119,7 @@ export default function App() {
         onSeedChange={handleSeedChange}
         onRandomSeed={handleRandomSeed}
         onDownload={handleDownload}
+        onDownloadSVG={handleDownloadSVG}
         onCopyRecipe={handleCopyRecipe}
         onResolutionChange={handleResolutionChange}
         onSupersampleChange={handleSupersampleChange}
