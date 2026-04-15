@@ -1,11 +1,12 @@
-// Export damascus pattern as SVG with smooth cubic Bezier contour paths
+// Export damascus pattern as SVG with multi-threshold color gradient contours
 //
 // Pipeline:
-//   1. Sample material field on grid
-//   2. Pad grid with zeros → forces all contours closed
-//   3. Marching squares → chain → Chaikin smooth
-//   4. Catmull-Rom → cubic Bezier for SVG path output
-//   5. Even-odd fill: dark background + bright compound path
+//   1. Sample material field on grid (continuous values 0–1)
+//   2. Extract contours at N threshold levels (topographic approach)
+//   3. Stack filled contour bands bottom-up: each level overpaints previous
+//   4. Catmull-Rom → cubic Bezier for smooth curves
+//   5. SVG feTurbulence filter for resolution-independent grain
+//   6. Radial gradient vignette overlay
 
 import { buildPerm } from './noise.js';
 import { ALLOYS } from './alloys.js';
@@ -13,12 +14,20 @@ import { sampleLayerField } from './sample.js';
 import { sig } from './shade.js';
 import { extractContours } from './contour.js';
 
-// Convert polyline to SVG path with Catmull-Rom → cubic Bezier curves
+// Seeded RNG for per-band color variation
+function seededRand(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    return (s >>> 0) / 0x100000000;
+  };
+}
+
+// Convert polyline to SVG cubic Bezier path
 function polylineToBezierPath(points) {
   if (points.length < 2) return '';
   const n = points.length;
 
-  // Check if closed
   const dx = points[0][0] - points[n - 1][0];
   const dy = points[0][1] - points[n - 1][1];
   const closed = Math.abs(dx) < 2 && Math.abs(dy) < 2;
@@ -34,8 +43,7 @@ function polylineToBezierPath(points) {
     ? (i) => points[((i % n) + n) % n]
     : (i) => points[Math.max(0, Math.min(n - 1, i))];
 
-  const T = 0.3; // Catmull-Rom tension
-
+  const T = 0.3;
   const count = closed ? n : n - 1;
   for (let i = 0; i < count; i++) {
     const p0 = get(i - 1), p1 = get(i), p2 = get(i + 1), p3 = get(i + 2);
@@ -49,58 +57,105 @@ function polylineToBezierPath(points) {
   return closed ? d + 'Z' : d;
 }
 
+// Interpolate color between dark and bright with optional variation
+function bandColor(dark, bright, t, variation) {
+  return [0, 1, 2].map(c => {
+    const base = dark[c] + (bright[c] - dark[c]) * t;
+    return Math.max(0, Math.min(255, Math.round(base + variation * 6)));
+  });
+}
+
 export function generateSVG(recipe, width = 1920, height = 768) {
   const perm = buildPerm(recipe.seed);
   const alloy = ALLOYS[recipe.layers.alloy];
+  const rand = seededRand(recipe.seed + 7919); // offset seed for color variation
 
-  // Fine grid — raw marching squares polyline is smooth since the noise field is smooth.
-  // Bezier conversion handles the rest.
   const gW = 640;
   const gH = 256;
-  const matField = new Float32Array(gW * gH);
 
+  // Sample the raw layer field (pre-sigmoid) for multi-threshold extraction
+  const rawField = new Float32Array(gW * gH);
   for (let gy = 0; gy < gH; gy++) {
     for (let gx = 0; gx < gW; gx++) {
       const bx = (gx + 0.5) / gW;
       const by = (gy + 0.5) / gH;
       const bz = recipe.crossSection.depth + bx * Math.tan(recipe.crossSection.angle) * 0.35;
       const t = sampleLayerField(perm, bx, by, bz, recipe.warp, recipe.layers.count, recipe.deformations);
-      matField[gy * gW + gx] = sig(t, alloy.sh);
+      // Apply sigmoid to get material value 0–1
+      rawField[gy * gW + gx] = sig(t, alloy.sh);
     }
   }
 
-  // Extract contours — padding forces all contours closed
-  const contours = extractContours(matField, gH, gW, 0.5, width, height);
-
-  // Build compound fill path (all contours as subpaths, one <path> element)
-  const fillParts = [];
-  const strokeParts = [];
-
-  for (const pl of contours) {
-    if (pl.length < 4) continue;
-    const pathStr = polylineToBezierPath(pl);
-    if (pathStr) {
-      fillParts.push(pathStr);
-      strokeParts.push(pathStr);
-    }
+  // Multi-threshold contour extraction
+  // More levels = smoother gradient. 10 levels gives good visual quality.
+  const NUM_LEVELS = 10;
+  const thresholds = [];
+  for (let i = 0; i < NUM_LEVELS; i++) {
+    thresholds.push((i + 0.5) / NUM_LEVELS); // 0.05, 0.15, ..., 0.95
   }
 
-  const fillPathData = fillParts.join(' ');
-  const strokePathData = strokeParts.join(' ');
+  // Extract contours at each threshold level
+  const levels = thresholds.map(threshold => ({
+    threshold,
+    contours: extractContours(rawField, gH, gW, threshold, width, height),
+  }));
 
-  const darkRGB = `rgb(${alloy.dark.join(',')})`;
-  const brightRGB = `rgb(${alloy.bright.join(',')})`;
-
-  // Recipe metadata (compact)
+  // Build SVG
   const recipeStr = JSON.stringify(recipe)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const darkRGB = alloy.dark;
+  const brightRGB = alloy.bright;
+
+  // Background: darkest color
+  const bgColor = bandColor(darkRGB, brightRGB, 0, 0);
+
+  let pathElements = '';
+
+  // Stack levels bottom-up: each overwrites previous, building gradient
+  for (let li = 0; li < levels.length; li++) {
+    const { threshold, contours } = levels[li];
+    if (contours.length === 0) continue;
+
+    // Color for this level — interpolated with seeded variation
+    const variation = (rand() - 0.5) * 2; // ±1 range, scaled by 6 in bandColor
+    const color = bandColor(darkRGB, brightRGB, threshold, variation);
+    const rgb = `rgb(${color[0]},${color[1]},${color[2]})`;
+
+    // Compound path for all contours at this level
+    const parts = [];
+    for (const pl of contours) {
+      if (pl.length < 4) continue;
+      const pathStr = polylineToBezierPath(pl);
+      if (pathStr) parts.push(pathStr);
+    }
+    if (parts.length === 0) continue;
+
+    pathElements += `<path d="${parts.join(' ')}" fill="${rgb}" fill-rule="evenodd" stroke="none"/>\n`;
+  }
+
+  // SVG filters for grain and vignette
+  const filters = `
+<defs>
+  <filter id="grain" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" seed="${recipe.seed}" result="noise"/>
+    <feColorMatrix type="saturate" values="0" in="noise" result="grey"/>
+    <feBlend mode="multiply" in="SourceGraphic" in2="grey"/>
+  </filter>
+  <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+    <stop offset="0%" stop-color="white" stop-opacity="0"/>
+    <stop offset="100%" stop-color="black" stop-opacity="0.3"/>
+  </radialGradient>
+</defs>`;
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
 <desc>Damascus s${recipe.seed} ${recipe.pattern} | ${recipeStr}</desc>
-<rect width="${width}" height="${height}" fill="${darkRGB}"/>
-<path d="${fillPathData}" fill="${brightRGB}" fill-rule="evenodd" stroke="none"/>
-<path d="${strokePathData}" fill="none" stroke="${darkRGB}" stroke-width="0.6" stroke-opacity="0.2"/>
+${filters}
+<g filter="url(#grain)">
+<rect width="${width}" height="${height}" fill="rgb(${bgColor[0]},${bgColor[1]},${bgColor[2]})"/>
+${pathElements}</g>
+<rect width="${width}" height="${height}" fill="url(#vignette)"/>
 </svg>`;
 }
 

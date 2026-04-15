@@ -1,13 +1,43 @@
-// Vector contour renderer — smooth anti-aliased fills via Canvas 2D Path2D
+// Vector contour renderer — multi-threshold color gradient with smooth Bezier fills
 //
-// Uses padded field so all contours close. Even-odd fill gives correct
-// alternating dark/bright regions. Pixel shading composited via multiply.
+// Extracts contours at N threshold levels, stacks filled bands bottom-up
+// for topographic color gradient. Pixel shading composited via multiply.
 
 import { buildPerm, n3 } from './noise.js';
 import { ALLOYS } from './alloys.js';
 import { sampleLayerField } from './sample.js';
 import { sig } from './shade.js';
 import { extractContours } from './contour.js';
+
+// Build a Bezier compound path from a set of contours
+function buildBezierPath(contours, W, H) {
+  const path = new Path2D();
+  for (const pl of contours) {
+    if (pl.length < 4) continue;
+    const n = pl.length;
+    const closed = Math.abs(pl[0][0] - pl[n - 1][0]) < W * 0.01 &&
+                   Math.abs(pl[0][1] - pl[n - 1][1]) < H * 0.01;
+
+    path.moveTo(pl[0][0], pl[0][1]);
+
+    const get = closed
+      ? (i) => pl[((i % n) + n) % n]
+      : (i) => pl[Math.max(0, Math.min(n - 1, i))];
+
+    const T = 0.3;
+    const count = closed ? n : n - 1;
+    for (let i = 0; i < count; i++) {
+      const p0 = get(i - 1), p1 = get(i), p2 = get(i + 1), p3 = get(i + 2);
+      const c1x = p1[0] + (p2[0] - p0[0]) * T;
+      const c1y = p1[1] + (p2[1] - p0[1]) * T;
+      const c2x = p2[0] - (p3[0] - p1[0]) * T;
+      const c2y = p2[1] - (p3[1] - p1[1]) * T;
+      path.bezierCurveTo(c1x, c1y, c2x, c2y, p2[0], p2[1]);
+    }
+    path.closePath();
+  }
+  return path;
+}
 
 export function renderDamascusVector(canvas, recipe) {
   const t0 = performance.now();
@@ -32,48 +62,41 @@ export function renderDamascusVector(canvas, recipe) {
     }
   }
 
-  // --- Extract contours (padded → all closed) ---
-  const contours = extractContours(matField, gH, gW, 0.5, W, H);
+  // --- Multi-threshold contour extraction ---
+  const NUM_LEVELS = 8;
+  const dark = alloy.dark;
+  const bright = alloy.bright;
 
-  // --- Vector fill ---
-  ctx.fillStyle = `rgb(${alloy.dark[0]},${alloy.dark[1]},${alloy.dark[2]})`;
+  // Seeded variation per band
+  let rngState = (recipe.seed + 7919) >>> 0;
+  const nextRng = () => {
+    rngState = (Math.imul(rngState, 1664525) + 1013904223) >>> 0;
+    return (rngState >>> 0) / 0x100000000 - 0.5; // ±0.5
+  };
+
+  // Background: darkest
+  ctx.fillStyle = `rgb(${dark[0]},${dark[1]},${dark[2]})`;
   ctx.fillRect(0, 0, W, H);
 
-  // Build compound bright path using Catmull-Rom → cubic Bezier for smooth curves
-  const brightPath = new Path2D();
-  for (const pl of contours) {
-    if (pl.length < 4) continue;
-    const n = pl.length;
-    const closed = Math.abs(pl[0][0] - pl[n - 1][0]) < W * 0.01 &&
-                   Math.abs(pl[0][1] - pl[n - 1][1]) < H * 0.01;
+  // Stack levels bottom-up
+  for (let li = 0; li < NUM_LEVELS; li++) {
+    const threshold = (li + 0.5) / NUM_LEVELS;
+    const contours = extractContours(matField, gH, gW, threshold, W, H);
+    if (contours.length === 0) continue;
 
-    brightPath.moveTo(pl[0][0], pl[0][1]);
+    const variation = nextRng() * 8;
+    const r = Math.max(0, Math.min(255, Math.round(dark[0] + (bright[0] - dark[0]) * threshold + variation)));
+    const g = Math.max(0, Math.min(255, Math.round(dark[1] + (bright[1] - dark[1]) * threshold + variation)));
+    const b = Math.max(0, Math.min(255, Math.round(dark[2] + (bright[2] - dark[2]) * threshold + variation)));
 
-    const get = closed
-      ? (i) => pl[((i % n) + n) % n]
-      : (i) => pl[Math.max(0, Math.min(n - 1, i))];
-
-    const T = 0.3;
-    const count = closed ? n : n - 1;
-    for (let i = 0; i < count; i++) {
-      const p0 = get(i - 1), p1 = get(i), p2 = get(i + 1), p3 = get(i + 2);
-      const c1x = p1[0] + (p2[0] - p0[0]) * T;
-      const c1y = p1[1] + (p2[1] - p0[1]) * T;
-      const c2x = p2[0] - (p3[0] - p1[0]) * T;
-      const c2y = p2[1] - (p3[1] - p1[1]) * T;
-      brightPath.bezierCurveTo(c1x, c1y, c2x, c2y, p2[0], p2[1]);
-    }
-    brightPath.closePath();
+    const path = buildBezierPath(contours, W, H);
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.fill(path, 'evenodd');
   }
-
-  ctx.fillStyle = `rgb(${alloy.bright[0]},${alloy.bright[1]},${alloy.bright[2]})`;
-  ctx.fill(brightPath, 'evenodd');
 
   // --- Shading overlay via multiply ---
   const eps = 2.0 / Math.min(W, H);
-
-  // Compute neutral shading (flat surface, no bump) for calibration
-  const neutralShade = 0.30 + 0.54 * 0.73 + 0.10 * 0.80 * 0.88; // amb + key*nz + fill*nz
+  const neutralShade = 0.30 + 0.54 * 0.73 + 0.10 * 0.80 * 0.88;
 
   const offscreen = new OffscreenCanvas(W, H);
   const octx = offscreen.getContext('2d');
@@ -109,11 +132,9 @@ export function renderDamascusVector(canvas, recipe) {
       const spec = Math.pow(kd, 14) * 0.42 * mat;
       const grain = n3(perm, px * 0.10, py * 0.10, recipe.crossSection.depth * 3 + 7) * 4.0;
 
-      // Vignette
       const vx = (px / W - 0.5) * 2, vy = (py / H - 0.5) * 2;
       const vig = Math.max(0.72, 1 - 0.22 * (vx * vx + vy * vy));
 
-      // Normalized shading: 255 = neutral (no bump effect), brighter/darker for lighting
       const lum = Math.min(255, Math.max(0,
         ((shade + spec * 1.5) / neutralShade) * vig * 255 + grain
       ));
@@ -126,7 +147,6 @@ export function renderDamascusVector(canvas, recipe) {
 
   octx.putImageData(oImg, 0, 0);
 
-  // Multiply composite: preserves vector fill colors, adds shading variation
   ctx.globalCompositeOperation = 'multiply';
   ctx.drawImage(offscreen, 0, 0);
   ctx.globalCompositeOperation = 'source-over';
