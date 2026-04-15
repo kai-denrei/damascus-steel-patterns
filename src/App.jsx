@@ -11,6 +11,7 @@ import StatusBar from './ui/StatusBar.jsx';
 import SwordPreview from './ui/SwordPreview.jsx';
 import Explore from './ui/Explore.jsx';
 import { downloadSVG } from './engine/export-svg.js';
+import SvgViewer from './ui/SvgViewer.jsx';
 
 const C = {
   amber: '#c8a040',
@@ -135,6 +136,9 @@ export default function App() {
         <button style={TAB_STYLE(tab === 'pattern')} onClick={() => setTab('pattern')}>
           PATTERN
         </button>
+        <button style={TAB_STYLE(tab === 'vector')} onClick={() => setTab('vector')}>
+          VECTOR
+        </button>
         <button style={TAB_STYLE(tab === 'explore')} onClick={() => setTab('explore')}>
           EXPLORE
         </button>
@@ -174,6 +178,10 @@ export default function App() {
             busy={busy}
           />
         </>
+      )}
+
+      {tab === 'vector' && (
+        <SvgViewer recipe={recipe} />
       )}
 
       {tab === 'explore' && (

@@ -1,0 +1,176 @@
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { generateSVG } from '../engine/export-svg.js';
+
+const C = {
+  amber: '#c8a040',
+  text: '#d8d4cc',
+  muted: '#706860',
+  dim: '#443c34',
+  border: '#221e18',
+};
+
+export default function SvgViewer({ recipe }) {
+  const containerRef = useRef(null);
+  const [svgContent, setSvgContent] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+
+  const generate = useCallback(() => {
+    setGenerating(true);
+    // Defer to let UI update
+    setTimeout(() => {
+      const svg = generateSVG(recipe, 1920, 768);
+      setSvgContent(svg);
+      setZoom(1);
+      setPan({ x: 0, y: 0 });
+      setGenerating(false);
+    }, 50);
+  }, [recipe]);
+
+  // Generate on first render and when recipe changes
+  useEffect(() => {
+    generate();
+  }, [recipe]);
+
+  const handleWheel = useCallback((e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    setZoom(z => Math.max(0.5, Math.min(20, z * delta)));
+  }, []);
+
+  const handleMouseDown = useCallback((e) => {
+    if (e.button !== 0) return;
+    setDragging(true);
+    dragStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+  }, [pan]);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!dragging) return;
+    setPan({
+      x: dragStart.current.panX + (e.clientX - dragStart.current.x),
+      y: dragStart.current.panY + (e.clientY - dragStart.current.y),
+    });
+  }, [dragging]);
+
+  const handleMouseUp = useCallback(() => {
+    setDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (dragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [dragging, handleMouseMove, handleMouseUp]);
+
+  // Attach wheel listener with passive: false for preventDefault
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [handleWheel]);
+
+  const svgDataUrl = svgContent
+    ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgContent)}`
+    : '';
+
+  const sizeKB = svgContent ? (new Blob([svgContent]).size / 1024).toFixed(0) : 0;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Controls */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        fontSize: 10,
+        fontFamily: 'monospace',
+      }}>
+        <div style={{ color: C.dim }}>
+          scroll to zoom &middot; drag to pan &middot; {zoom.toFixed(1)}x &middot; {sizeKB}KB
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
+            style={{
+              padding: '3px 8px', fontSize: 10, fontFamily: 'monospace',
+              background: 'transparent', border: `1px solid ${C.dim}`,
+              color: C.dim, cursor: 'pointer',
+            }}
+          >
+            RESET
+          </button>
+          <button
+            onClick={generate}
+            style={{
+              padding: '3px 8px', fontSize: 10, fontFamily: 'monospace',
+              background: 'transparent', border: `1px solid ${C.dim}`,
+              color: C.dim, cursor: 'pointer',
+            }}
+          >
+            REGENERATE
+          </button>
+        </div>
+      </div>
+
+      {/* Viewer */}
+      <div
+        ref={containerRef}
+        onMouseDown={handleMouseDown}
+        style={{
+          border: `1px solid ${C.border}`,
+          overflow: 'hidden',
+          cursor: dragging ? 'grabbing' : 'grab',
+          height: 400,
+          position: 'relative',
+          background: '#050505',
+        }}
+      >
+        {generating && (
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(5,5,5,0.8)', zIndex: 2,
+            color: C.amber, fontSize: 11, fontFamily: 'monospace',
+            letterSpacing: '0.2em',
+          }}>
+            GENERATING SVG...
+          </div>
+        )}
+        {svgDataUrl && (
+          <img
+            src={svgDataUrl}
+            alt="Damascus pattern SVG"
+            draggable={false}
+            style={{
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              transformOrigin: 'center center',
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              imageRendering: 'auto',
+              userSelect: 'none',
+            }}
+          />
+        )}
+      </div>
+
+      {/* Zoom hint at high zoom */}
+      {zoom > 3 && (
+        <div style={{
+          fontSize: 9, color: C.dim, fontFamily: 'monospace', textAlign: 'center',
+        }}>
+          vector curves stay smooth at any zoom — no pixels
+        </div>
+      )}
+    </div>
+  );
+}

@@ -70,7 +70,6 @@ export function marchingSquares(field, rows, cols, threshold) {
 export function chainSegments(segments, tolerance = 0.01) {
   if (segments.length === 0) return [];
 
-  // Build adjacency via spatial hashing
   const key = (p) => `${Math.round(p[0] / tolerance)},${Math.round(p[1] / tolerance)}`;
   const used = new Uint8Array(segments.length);
   const endpointMap = new Map();
@@ -91,7 +90,7 @@ export function chainSegments(segments, tolerance = 0.01) {
 
     const chain = [segments[start][0], segments[start][1]];
 
-    // Extend forward from chain end
+    // Extend forward
     let extended = true;
     while (extended) {
       extended = false;
@@ -118,7 +117,7 @@ export function chainSegments(segments, tolerance = 0.01) {
       }
     }
 
-    // Extend backward from chain start
+    // Extend backward
     extended = true;
     while (extended) {
       extended = false;
@@ -166,7 +165,7 @@ export function smoothChaikin(points, iterations = 2) {
     const next = [];
     const n = closed ? pts.length : pts.length - 1;
 
-    if (!closed) next.push(pts[0]); // keep first point
+    if (!closed) next.push(pts[0]);
 
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % pts.length;
@@ -181,9 +180,42 @@ export function smoothChaikin(points, iterations = 2) {
       ]);
     }
 
-    if (!closed) next.push(pts[pts.length - 1]); // keep last point
+    if (!closed) next.push(pts[pts.length - 1]);
     pts = next;
   }
 
   return pts;
+}
+
+// Pad a field with zeros so contours close instead of terminating at edges.
+// Returns { padded, padW, padH } — contour coords are offset by +1 from original.
+export function padField(field, rows, cols) {
+  const padW = cols + 2;
+  const padH = rows + 2;
+  const padded = new Float32Array(padW * padH); // zeros = below threshold
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      padded[(y + 1) * padW + (x + 1)] = field[y * cols + x];
+    }
+  }
+  return { padded, padW, padH };
+}
+
+// Full pipeline: sample field → pad → marching squares → chain → smooth → scale
+// Returns array of smoothed polylines in output coordinates [0, outW] × [0, outH]
+export function extractContours(field, rows, cols, threshold, outW, outH, smoothIter = 3) {
+  const { padded, padW, padH } = padField(field, rows, cols);
+  const segments = marchingSquares(padded, padH, padW, threshold);
+  const polylines = chainSegments(segments, 0.01);
+
+  // Shift by -1 (remove padding offset), then scale to output coords
+  const sx = outW / cols;
+  const sy = outH / rows;
+
+  return polylines
+    .filter(pl => pl.length >= 3)
+    .map(pl => {
+      const shifted = pl.map(([x, y]) => [(x - 1) * sx, (y - 1) * sy]);
+      return smoothChaikin(shifted, smoothIter);
+    });
 }
