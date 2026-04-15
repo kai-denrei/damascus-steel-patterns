@@ -32,7 +32,7 @@ export default function SvgViewer({ recipe }) {
   // Regenerate when recipe or settings change
   useEffect(() => {
     generate();
-  }, [recipe, settings]);
+  }, [generate]);
 
   const handleSaveSVG = useCallback(() => {
     downloadSVG(recipe, 1920, 768, settings);
