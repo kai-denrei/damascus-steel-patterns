@@ -23,9 +23,10 @@ const RESOLUTIONS = [
   { value: 1, label: '1\u00D7 (640\u00D7256)' },
   { value: 2, label: '2\u00D7 (1280\u00D7512)' },
   { value: 4, label: '4\u00D7 (2560\u00D71024)' },
+  { value: 8, label: '8\u00D7 (5120\u00D72048)' },
 ];
 
-export default function Header({ recipe, onPresetChange, onSeedChange, onRandomSeed, onDownload, onCopyRecipe, onResolutionChange }) {
+export default function Header({ recipe, onPresetChange, onSeedChange, onRandomSeed, onDownload, onCopyRecipe, onResolutionChange, onSupersampleChange }) {
   return (
     <div style={{
       display: 'flex',
@@ -97,6 +98,18 @@ export default function Header({ recipe, onPresetChange, onSeedChange, onRandomS
             <option key={r.value} value={r.value}>{r.label}</option>
           ))}
         </select>
+        {/* SSAA toggle */}
+        <button
+          style={{
+            ...btn,
+            color: recipe.supersample ? C.amber : C.dim,
+            borderColor: recipe.supersample ? C.amber : C.dim,
+          }}
+          onClick={() => onSupersampleChange(!recipe.supersample)}
+          title="2\u00D72 supersampling anti-aliasing — smoother layer edges, ~3\u00D7 slower"
+        >
+          SSAA
+        </button>
         <button style={btn} onClick={onDownload}>PNG &darr;</button>
         <button style={btn} onClick={onCopyRecipe}>COPY RECIPE</button>
       </div>

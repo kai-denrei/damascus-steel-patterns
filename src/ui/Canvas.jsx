@@ -128,7 +128,8 @@ const Canvas = forwardRef(function Canvas({ recipe, onRenderTime, onBusyChange }
   const pixelH = BASE_HEIGHT * res;
 
   // Longer debounce at higher resolutions so the animation gets screen time
-  const debounce = res >= 4 ? 400 : res >= 2 ? 250 : 180;
+  const ssaaFactor = recipe.supersample ? 1.5 : 1;
+  const debounce = Math.round((res >= 8 ? 600 : res >= 4 ? 400 : res >= 2 ? 250 : 180) * ssaaFactor);
 
   useEffect(() => {
     setBusy(true);

@@ -79,6 +79,10 @@ export default function App() {
     setRecipe(prev => ({ ...prev, resolution }));
   }, []);
 
+  const handleSupersampleChange = useCallback((supersample) => {
+    setRecipe(prev => ({ ...prev, supersample }));
+  }, []);
+
   const handleDeformationChange = useCallback((deformations) => {
     setRecipe(prev => ({ ...prev, deformations, pattern: 'custom' }));
   }, []);
@@ -108,6 +112,7 @@ export default function App() {
         onDownload={handleDownload}
         onCopyRecipe={handleCopyRecipe}
         onResolutionChange={handleResolutionChange}
+        onSupersampleChange={handleSupersampleChange}
       />
 
       {/* Tab bar */}
