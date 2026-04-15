@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { generateSVG } from '../engine/export-svg.js';
+import { generateSVG, downloadSVG } from '../engine/export-svg.js';
+import VectorControls, { DEFAULT_VECTOR_SETTINGS } from './VectorControls.jsx';
 
 const C = {
   amber: '#c8a040',
@@ -16,24 +17,26 @@ export default function SvgViewer({ recipe }) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
+  const [settings, setSettings] = useState(DEFAULT_VECTOR_SETTINGS);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
   const generate = useCallback(() => {
     setGenerating(true);
-    // Defer to let UI update
     setTimeout(() => {
-      const svg = generateSVG(recipe, 1920, 768);
+      const svg = generateSVG(recipe, 1920, 768, settings);
       setSvgContent(svg);
-      setZoom(1);
-      setPan({ x: 0, y: 0 });
       setGenerating(false);
     }, 50);
-  }, [recipe]);
+  }, [recipe, settings]);
 
-  // Generate on first render and when recipe changes
+  // Regenerate when recipe or settings change
   useEffect(() => {
     generate();
-  }, [recipe]);
+  }, [recipe, settings]);
+
+  const handleSaveSVG = useCallback(() => {
+    downloadSVG(recipe, 1920, 768, settings);
+  }, [recipe, settings]);
 
   const handleWheel = useCallback((e) => {
     e.preventDefault();
@@ -70,7 +73,6 @@ export default function SvgViewer({ recipe }) {
     }
   }, [dragging, handleMouseMove, handleMouseUp]);
 
-  // Attach wheel listener with passive: false for preventDefault
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -86,7 +88,10 @@ export default function SvgViewer({ recipe }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* Controls */}
+      {/* Vector settings */}
+      <VectorControls settings={settings} onChange={setSettings} />
+
+      {/* Status bar */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -106,17 +111,17 @@ export default function SvgViewer({ recipe }) {
               color: C.dim, cursor: 'pointer',
             }}
           >
-            RESET
+            RESET VIEW
           </button>
           <button
-            onClick={generate}
+            onClick={handleSaveSVG}
             style={{
               padding: '3px 8px', fontSize: 10, fontFamily: 'monospace',
-              background: 'transparent', border: `1px solid ${C.dim}`,
-              color: C.dim, cursor: 'pointer',
+              background: 'transparent', border: `1px solid ${C.amber}`,
+              color: C.amber, cursor: 'pointer',
             }}
           >
-            REGENERATE
+            SAVE SVG
           </button>
         </div>
       </div>
@@ -142,7 +147,7 @@ export default function SvgViewer({ recipe }) {
             color: C.amber, fontSize: 11, fontFamily: 'monospace',
             letterSpacing: '0.2em',
           }}>
-            GENERATING SVG...
+            GENERATING SVG\u2026
           </div>
         )}
         {svgDataUrl && (
@@ -163,12 +168,11 @@ export default function SvgViewer({ recipe }) {
         )}
       </div>
 
-      {/* Zoom hint at high zoom */}
       {zoom > 3 && (
         <div style={{
           fontSize: 9, color: C.dim, fontFamily: 'monospace', textAlign: 'center',
         }}>
-          vector curves stay smooth at any zoom — no pixels
+          vector curves stay smooth at any zoom
         </div>
       )}
     </div>

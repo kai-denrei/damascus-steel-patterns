@@ -65,10 +65,13 @@ function bandColor(dark, bright, t, variation) {
   });
 }
 
-export function generateSVG(recipe, width = 1920, height = 768) {
+const DEFAULTS = { levels: 10, smoothing: 4, grain: 60, vignette: 30, colorVariation: 50 };
+
+export function generateSVG(recipe, width = 1920, height = 768, settings = {}) {
+  const opts = { ...DEFAULTS, ...settings };
   const perm = buildPerm(recipe.seed);
   const alloy = ALLOYS[recipe.layers.alloy];
-  const rand = seededRand(recipe.seed + 7919); // offset seed for color variation
+  const rand = seededRand(recipe.seed + 7919);
 
   const gW = 640;
   const gH = 256;
@@ -87,18 +90,15 @@ export function generateSVG(recipe, width = 1920, height = 768) {
   }
 
   // Multi-threshold contour extraction
-  // More levels = smoother gradient. 10 levels gives good visual quality.
-  const NUM_LEVELS = 10;
-  const thresholds = [];
+  const NUM_LEVELS = opts.levels;
+  const levels = [];
   for (let i = 0; i < NUM_LEVELS; i++) {
-    thresholds.push((i + 0.5) / NUM_LEVELS); // 0.05, 0.15, ..., 0.95
+    const threshold = (i + 0.5) / NUM_LEVELS;
+    levels.push({
+      threshold,
+      contours: extractContours(rawField, gH, gW, threshold, width, height, opts.smoothing),
+    });
   }
-
-  // Extract contours at each threshold level
-  const levels = thresholds.map(threshold => ({
-    threshold,
-    contours: extractContours(rawField, gH, gW, threshold, width, height),
-  }));
 
   // Build SVG
   const recipeStr = JSON.stringify(recipe)
@@ -118,7 +118,8 @@ export function generateSVG(recipe, width = 1920, height = 768) {
     if (contours.length === 0) continue;
 
     // Color for this level — interpolated with seeded variation
-    const variation = (rand() - 0.5) * 2; // ±1 range, scaled by 6 in bandColor
+    const variationScale = opts.colorVariation / 50; // 0 = none, 1 = default, 2 = max
+    const variation = (rand() - 0.5) * 2 * variationScale;
     const color = bandColor(darkRGB, brightRGB, threshold, variation);
     const rgb = `rgb(${color[0]},${color[1]},${color[2]})`;
 
@@ -134,33 +135,45 @@ export function generateSVG(recipe, width = 1920, height = 768) {
     pathElements += `<path d="${parts.join(' ')}" fill="${rgb}" fill-rule="evenodd" stroke="none"/>\n`;
   }
 
-  // SVG filters for grain and vignette
-  const filters = `
-<defs>
-  <filter id="grain" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" seed="${recipe.seed}" result="noise"/>
+  // SVG filters — controlled by settings
+  const grainFreq = (0.4 + opts.grain * 0.01).toFixed(2); // 0.4–1.4
+  const grainOpacity = (opts.grain / 100).toFixed(2);
+  const vigOpacity = (opts.vignette / 100).toFixed(2);
+
+  const useGrain = opts.grain > 0;
+  const useVignette = opts.vignette > 0;
+
+  let defs = '<defs>\n';
+  if (useGrain) {
+    defs += `  <filter id="grain" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="${grainFreq}" numOctaves="4" seed="${recipe.seed}" result="noise"/>
     <feColorMatrix type="saturate" values="0" in="noise" result="grey"/>
-    <feBlend mode="multiply" in="SourceGraphic" in2="grey"/>
-  </filter>
-  <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
-    <stop offset="0%" stop-color="white" stop-opacity="0"/>
-    <stop offset="100%" stop-color="black" stop-opacity="0.3"/>
-  </radialGradient>
-</defs>`;
+    <feComposite in="grey" in2="SourceGraphic" operator="in" result="masked"/>
+    <feBlend mode="multiply" in="SourceGraphic" in2="masked"/>
+  </filter>\n`;
+  }
+  if (useVignette) {
+    defs += `  <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+    <stop offset="0%" stop-color="black" stop-opacity="0"/>
+    <stop offset="100%" stop-color="black" stop-opacity="${vigOpacity}"/>
+  </radialGradient>\n`;
+  }
+  defs += '</defs>';
+
+  const grainAttr = useGrain ? ' filter="url(#grain)"' : '';
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
 <desc>Damascus s${recipe.seed} ${recipe.pattern} | ${recipeStr}</desc>
-${filters}
-<g filter="url(#grain)">
+${defs}
+<g${grainAttr}>
 <rect width="${width}" height="${height}" fill="rgb(${bgColor[0]},${bgColor[1]},${bgColor[2]})"/>
-${pathElements}</g>
-<rect width="${width}" height="${height}" fill="url(#vignette)"/>
+${pathElements}</g>${useVignette ? `\n<rect width="${width}" height="${height}" fill="url(#vignette)"/>` : ''}
 </svg>`;
 }
 
-export function downloadSVG(recipe, width, height) {
-  const svg = generateSVG(recipe, width, height);
+export function downloadSVG(recipe, width, height, settings) {
+  const svg = generateSVG(recipe, width, height, settings);
   const blob = new Blob([svg], { type: 'image/svg+xml' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

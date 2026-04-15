@@ -245,7 +245,7 @@ function subsample(points, step) {
 // Full pipeline: field → pad → march → chain → scale → smooth → subsample
 // The smoothing removes marching-squares staircase artifacts.
 // The subsampling gives Bezier tangent computation proper long-range context.
-export function extractContours(field, rows, cols, threshold, outW, outH) {
+export function extractContours(field, rows, cols, threshold, outW, outH, smoothRadius = 4) {
   const { padded, padW, padH } = padField(field, rows, cols);
   const segments = marchingSquares(padded, padH, padW, threshold);
   const polylines = chainSegments(segments, 0.01);
@@ -259,9 +259,8 @@ export function extractContours(field, rows, cols, threshold, outW, outH) {
       // Shift from padded coords, scale to output
       const scaled = pl.map(([x, y]) => [(x - 1) * sx, (y - 1) * sy]);
 
-      // Smooth: 3 iterations of box filter with radius 4
-      // removes staircase while preserving curve shape
-      const smoothed = smoothPolylineCoords(scaled, 4, 3);
+      // Smooth: 3 iterations of box filter removes staircase
+      const smoothed = smoothPolylineCoords(scaled, smoothRadius, 3);
 
       // Subsample: keep every 3rd point so Bezier tangents
       // see the actual curve direction, not local zigzag
