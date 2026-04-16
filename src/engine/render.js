@@ -2,6 +2,18 @@ import { buildPerm } from './noise.js';
 import { ALLOYS } from './alloys.js';
 import { sampleLayerField } from './sample.js';
 import { sig, shadePixel } from './shade.js';
+import { PATTERN_MODES } from './pattern-modes.js';
+
+// Unified field sampler: dispatches to pattern mode or organic
+function sampleField(perm, bx, by, bz, recipe) {
+  const mode = recipe.patternMode || 'organic';
+  const sampler = PATTERN_MODES[mode];
+  if (sampler) {
+    return sampler(bx, by, recipe.modeParams || {}, perm);
+  }
+  // Default: organic (existing Perlin domain-warp)
+  return sampleField(perm, bx, by, bz, recipe);
+}
 
 export function renderDamascus(canvas, recipe) {
   const t0 = performance.now();
@@ -37,11 +49,11 @@ export function renderDamascus(canvas, recipe) {
         for (let s = 0; s < 4; s++) {
           const sx = bx + SS_OFFSETS[s][0] / W;
           const sy = by + SS_OFFSETS[s][1] / H;
-          const st = sampleLayerField(perm, sx, sy, bz, recipe.warp, recipe.layers.count, recipe.deformations);
+          const st = sampleField(perm, sx, sy, bz, recipe);
 
           // Adaptive sigmoid AA: measure how fast t changes across this sub-pixel
           // and soften the threshold proportionally
-          const stx = sampleLayerField(perm, sx + eps, sy, bz, recipe.warp, recipe.layers.count, recipe.deformations);
+          const stx = sampleField(perm, sx + eps, sy, bz, recipe);
           const dtdx = Math.abs(stx - st) / eps;
           const pixelGrad = dtdx * (1.0 / W);
           const shAdapt = Math.min(alloy.sh, 1.4 / Math.max(pixelGrad, 0.001));
@@ -51,9 +63,9 @@ export function renderDamascus(canvas, recipe) {
         mat = matSum / 4;
 
         // Bump-map: still use finite difference at pixel center for the normal
-        const t = sampleLayerField(perm, bx, by, bz, recipe.warp, recipe.layers.count, recipe.deformations);
-        const tx = sampleLayerField(perm, bx + eps, by, bz, recipe.warp, recipe.layers.count, recipe.deformations);
-        const ty = sampleLayerField(perm, bx, by + eps, bz, recipe.warp, recipe.layers.count, recipe.deformations);
+        const t = sampleField(perm, bx, by, bz, recipe);
+        const tx = sampleField(perm, bx + eps, by, bz, recipe);
+        const ty = sampleField(perm, bx, by + eps, bz, recipe);
 
         const dtdxC = Math.abs(tx - t) / eps;
         const dtdyC = Math.abs(ty - t) / eps;
@@ -64,9 +76,9 @@ export function renderDamascus(canvas, recipe) {
         maty = sig(ty, shC);
       } else {
         // Standard path with adaptive sigmoid AA
-        const t = sampleLayerField(perm, bx, by, bz, recipe.warp, recipe.layers.count, recipe.deformations);
-        const tx = sampleLayerField(perm, bx + eps, by, bz, recipe.warp, recipe.layers.count, recipe.deformations);
-        const ty = sampleLayerField(perm, bx, by + eps, bz, recipe.warp, recipe.layers.count, recipe.deformations);
+        const t = sampleField(perm, bx, by, bz, recipe);
+        const tx = sampleField(perm, bx + eps, by, bz, recipe);
+        const ty = sampleField(perm, bx, by + eps, bz, recipe);
 
         // Adaptive sigmoid: screen-space gradient of t determines effective sharpness.
         // If t changes fast across a pixel, soften the sigmoid so the transition

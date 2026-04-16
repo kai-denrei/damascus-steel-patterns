@@ -9,6 +9,7 @@ import UnicodeSlider from './ui/UnicodeSlider.jsx';
 import { DEFAULT_VECTOR_SETTINGS } from './ui/VectorControls.jsx';
 import About from './ui/About.jsx';
 import { BLADE_SHAPES, BLADE_NAMES, generateClipPoint, generateTanto, generateSpearPoint } from './ui/BladeShapes.js';
+import { MODE_NAMES, MODE_LABELS, MODE_DEFAULTS, MODE_SLIDERS } from './engine/pattern-modes.js';
 
 // ═══════════════════════════════════════════
 // Random recipe generation
@@ -577,6 +578,21 @@ export default function AppV2() {
     });
   }, [exploreRecipes, section]);
 
+  const handleModeChange = useCallback((mode) => {
+    setRecipe(r => ({
+      ...r,
+      patternMode: mode,
+      modeParams: { ...MODE_DEFAULTS[mode] },
+    }));
+  }, []);
+
+  const handleModeParam = useCallback((key, val) => {
+    setRecipe(r => ({
+      ...r,
+      modeParams: { ...r.modeParams, [key]: val },
+    }));
+  }, []);
+
   const handleForgeAnew = useCallback(() => {
     if (section === 'explore') {
       setExploreRecipes(Array.from({ length: 9 }, () => randomRecipe()));
@@ -627,7 +643,7 @@ export default function AppV2() {
         maxWidth: 1100, width: '100%', margin: '0 auto', flexWrap: 'wrap', gap: 6,
       }}>
         <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-          DAMASCUS FORGE <span style={{ fontSize: 8, fontWeight: 400, color: T.textDim, letterSpacing: '0.05em' }}>v2.2</span>
+          DAMASCUS FORGE <span style={{ fontSize: 8, fontWeight: 400, color: T.textDim, letterSpacing: '0.05em' }}>v2.3</span>
         </div>
         <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Forge Anew button */}
@@ -717,9 +733,27 @@ export default function AppV2() {
               padding: '6px 24px', fontSize: 9, color: T.textDim, fontFamily: 'monospace',
               letterSpacing: '0.05em', borderBottom: `1px solid ${T.border}`,
             }}>
-              {deformStr} &middot; {recipe.layers.alloy} &middot; {recipe.layers.count} layers &middot; seed {recipe.seed}
+              {MODE_LABELS[recipe.patternMode || 'organic']} &middot; {recipe.layers.alloy} &middot; seed {recipe.seed}
             </div>
 
+            {/* Pattern mode selector */}
+            <div style={{
+              padding: '8px 16px',
+              display: 'flex', gap: 4, flexWrap: 'wrap',
+              borderBottom: `1px solid ${T.border}`,
+            }}>
+              {MODE_NAMES.map(m => (
+                <button key={m} onClick={() => handleModeChange(m)}
+                  style={{
+                    ...btnStyle((recipe.patternMode || 'organic') === m),
+                    padding: '4px 10px', fontSize: 9,
+                  }}>
+                  {MODE_LABELS[m]}
+                </button>
+              ))}
+            </div>
+
+            {/* Controls: scale + seed + per-mode sliders */}
             <div style={{
               padding: '8px 16px',
               display: 'grid',
@@ -731,9 +765,17 @@ export default function AppV2() {
                 min={30} max={300} step={5} tooltip="Pattern zoom on the blade." />
               <UnicodeSlider label="seed" value={recipe.seed}
                 onChange={v => setRecipe(r => ({ ...r, seed: v }))} min={0} max={999999} step={1} />
-              <UnicodeSlider label="layers" value={recipe.layers.count}
-                onChange={v => setRecipe(r => ({ ...r, layers: { ...r.layers, count: v } }))}
-                min={4} max={96} step={1} tooltip="Layer count." />
+              {(recipe.patternMode || 'organic') === 'organic' && (
+                <UnicodeSlider label="layers" value={recipe.layers.count}
+                  onChange={v => setRecipe(r => ({ ...r, layers: { ...r.layers, count: v } }))}
+                  min={4} max={96} step={1} tooltip="Layer count." />
+              )}
+              {MODE_SLIDERS[recipe.patternMode || 'organic']?.map(s => (
+                <UnicodeSlider key={s.key} label={s.label}
+                  value={recipe.modeParams?.[s.key] ?? MODE_DEFAULTS[recipe.patternMode]?.[s.key] ?? 0}
+                  onChange={v => handleModeParam(s.key, v)}
+                  min={s.min} max={s.max} step={s.step} tooltip={s.tip} />
+              ))}
             </div>
 
             <div style={{ padding: '12px 16px' }}>
