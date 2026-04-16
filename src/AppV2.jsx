@@ -160,25 +160,52 @@ async function renderBlade(canvas, recipe, textureScale, vecSettings) {
 
   // ── 4. Fuller groove (research 2c) ──
   // Positioned at ~38% from spine to bevel, runs 8%→75% of blade length
+  // Tapers at both ends for realistic capsule shape
   const fullerPts = [];
-  const fullerWidth = H * 0.022;
+  const fullerMaxW = H * 0.022;
+  const fullerStart = 0.08, fullerEnd = 0.75;
+  const taperLen = 0.06; // 6% of blade length for taper in/out
+
   for (let i = 0; i < numPts; i++) {
     const t = i / (numPts - 1);
-    if (t < 0.08 || t > 0.75) continue;
+    if (t < fullerStart || t > fullerEnd) continue;
     const sy = spine[i][1];
     const by = bevelLine[i][1];
     const fullerY = sy + (by - sy) * 0.38;
-    fullerPts.push([spine[i][0], fullerY]);
+
+    // Taper: ease in at start, ease out at end
+    let widthScale = 1;
+    if (t < fullerStart + taperLen) {
+      const p = (t - fullerStart) / taperLen;
+      widthScale = p * p * (3 - 2 * p); // smoothstep
+    } else if (t > fullerEnd - taperLen) {
+      const p = (fullerEnd - t) / taperLen;
+      widthScale = p * p * (3 - 2 * p);
+    }
+    fullerPts.push([spine[i][0], fullerY, fullerMaxW * widthScale]);
   }
 
   if (fullerPts.length > 2) {
-    // Layer 1: Dark groove fill
+    // Layer 1: Dark groove fill with tapered width
     ctx.beginPath();
-    fullerPts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y - fullerWidth / 2) : ctx.lineTo(x, y - fullerWidth / 2));
-    for (let i = fullerPts.length - 1; i >= 0; i--) ctx.lineTo(fullerPts[i][0], fullerPts[i][1] + fullerWidth / 2);
+    // Upper edge (forward)
+    ctx.moveTo(fullerPts[0][0], fullerPts[0][1] - fullerPts[0][2] / 2);
+    for (let i = 1; i < fullerPts.length; i++) {
+      ctx.lineTo(fullerPts[i][0], fullerPts[i][1] - fullerPts[i][2] / 2);
+    }
+    // Rounded tip cap
+    const last = fullerPts[fullerPts.length - 1];
+    ctx.quadraticCurveTo(last[0] + last[2], last[1], last[0], last[1] + last[2] / 2);
+    // Lower edge (backward)
+    for (let i = fullerPts.length - 2; i >= 0; i--) {
+      ctx.lineTo(fullerPts[i][0], fullerPts[i][1] + fullerPts[i][2] / 2);
+    }
+    // Rounded heel cap
+    const first = fullerPts[0];
+    ctx.quadraticCurveTo(first[0] - first[2], first[1], first[0], first[1] - first[2] / 2);
     ctx.closePath();
 
-    const fullerGrad = ctx.createLinearGradient(0, fullerPts[0][1] - fullerWidth / 2, 0, fullerPts[0][1] + fullerWidth / 2);
+    const fullerGrad = ctx.createLinearGradient(0, fullerPts[10][1] - fullerMaxW / 2, 0, fullerPts[10][1] + fullerMaxW / 2);
     fullerGrad.addColorStop(0, 'rgba(24,22,20,0.7)');
     fullerGrad.addColorStop(0.5, 'rgba(12,10,8,0.85)');
     fullerGrad.addColorStop(1, 'rgba(24,22,20,0.7)');
@@ -186,13 +213,15 @@ async function renderBlade(canvas, recipe, textureScale, vecSettings) {
 
     // Layer 2: Upper lip AO shadow
     ctx.beginPath();
-    fullerPts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y - fullerWidth / 2) : ctx.lineTo(x, y - fullerWidth / 2));
-    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.moveTo(fullerPts[0][0], fullerPts[0][1] - fullerPts[0][2] / 2);
+    for (let i = 1; i < fullerPts.length; i++) ctx.lineTo(fullerPts[i][0], fullerPts[i][1] - fullerPts[i][2] / 2);
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1; ctx.stroke();
 
     // Layer 3: Lower lip specular highlight
     ctx.beginPath();
-    fullerPts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y + fullerWidth / 2) : ctx.lineTo(x, y + fullerWidth / 2));
-    ctx.strokeStyle = 'rgba(200,190,175,0.25)'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.moveTo(fullerPts[0][0], fullerPts[0][1] + fullerPts[0][2] / 2);
+    for (let i = 1; i < fullerPts.length; i++) ctx.lineTo(fullerPts[i][0], fullerPts[i][1] + fullerPts[i][2] / 2);
+    ctx.strokeStyle = 'rgba(200,190,175,0.22)'; ctx.lineWidth = 0.7; ctx.stroke();
   }
 
   ctx.restore(); // end blade clip
