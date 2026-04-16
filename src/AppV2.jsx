@@ -55,18 +55,32 @@ function randomDeform(type) {
   }
 }
 
-// Blade renderer (bevel view)
-function renderBevel(canvas, recipe, textureScale) {
+// Generate SVG vector texture, rasterize to image, return as Promise<HTMLImageElement>
+function generateVectorTexture(recipe, width, height, vecSettings, textureScale) {
+  // Generate SVG with patternScale baked into the recipe
+  const scaledRecipe = { ...recipe, patternScale: textureScale / 100 };
+  const svgStr = generateSVG(scaledRecipe, width, height, vecSettings);
+  const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgStr)}`;
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
+}
+
+// Blade renderer (bevel view) — uses vector SVG texture
+async function renderBevel(canvas, recipe, textureScale, vecSettings) {
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = T.bgDeep;
   ctx.fillRect(0, 0, W, H);
 
-  // Render texture at full canvas size with patternScale
-  const tex = document.createElement('canvas');
-  tex.width = W; tex.height = H;
-  renderDamascus(tex, { ...recipe, resolution: 1, patternScale: textureScale / 100 });
+  // Generate vector texture via SVG pipeline
+  const texImg = await generateVectorTexture(recipe, W, H, vecSettings, textureScale);
+  if (!texImg) return;
 
   // Blade geometry
   const numPts = 80;
@@ -97,7 +111,7 @@ function renderBevel(canvas, recipe, textureScale) {
   // Draw texture clipped to blade
   ctx.save();
   ctx.clip(bladePath);
-  ctx.drawImage(tex, 0, 0, W, H);
+  ctx.drawImage(texImg, 0, 0, W, H);
 
   // Metallic shading
   const cx = W / 2, cy = H / 2;
@@ -167,13 +181,18 @@ export default function AppV2() {
   }, [recipe]);
 
   // Render blade
+  const [rendering, setRendering] = useState(false);
   useEffect(() => {
     if (!canvasRef.current || section !== 'blade') return;
-    const tid = setTimeout(() => {
-      renderBevel(canvasRef.current, recipe, textureScale);
-    }, 150);
-    return () => clearTimeout(tid);
-  }, [recipe, textureScale, section]);
+    let cancelled = false;
+    setRendering(true);
+    const tid = setTimeout(async () => {
+      if (cancelled) return;
+      await renderBevel(canvasRef.current, recipe, textureScale, vecSettings);
+      if (!cancelled) setRendering(false);
+    }, 200);
+    return () => { cancelled = true; clearTimeout(tid); };
+  }, [recipe, textureScale, vecSettings, section]);
 
   const handleReroll = useCallback(() => setRecipe(randomRecipe()), []);
 
@@ -269,9 +288,18 @@ export default function AppV2() {
               />
               {/* Forge vignette */}
               <div style={{
-                background: 'radial-gradient(ellipse at center, transparent 35%, rgba(8,6,4,0.5) 70%, rgba(4,3,2,0.82) 100%)',
+                background: 'radial-gradient(ellipse at center, transparent 35%, rgba(8,6,4,0.45) 70%, rgba(4,3,2,0.75) 100%)',
                 pointerEvents: 'none', position: 'absolute', inset: 0,
               }} />
+              {rendering && (
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(13,11,9,0.6)',
+                  fontFamily: 'monospace', fontSize: 11, color: T.emberLow,
+                  letterSpacing: '0.2em',
+                }}>FORGING\u2026</div>
+              )}
             </div>
 
             {/* Controls strip */}

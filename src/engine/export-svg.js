@@ -66,11 +66,12 @@ export function generateSVG(recipe, width = 1920, height = 768, settings = {}) {
   const gW = Math.min(1600, Math.round(gH * 2.5));
 
   // Sample material field
+  const pScale = recipe.patternScale || 1;
   const matField = new Float32Array(gW * gH);
   for (let gy = 0; gy < gH; gy++) {
     for (let gx = 0; gx < gW; gx++) {
-      const bx = (gx + 0.5) / gW;
-      const by = (gy + 0.5) / gH;
+      const bx = ((gx + 0.5) / gW) * pScale;
+      const by = ((gy + 0.5) / gH) * pScale;
       const bz = recipe.crossSection.depth + bx * Math.tan(recipe.crossSection.angle) * 0.35;
       const t = sampleLayerField(perm, bx, by, bz, recipe.warp, recipe.layers.count, recipe.deformations);
       matField[gy * gW + gx] = sig(t, alloy.sh);
