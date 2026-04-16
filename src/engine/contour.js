@@ -44,6 +44,16 @@ export function marchingSquares(field, rows, cols, threshold) {
       if (bl >= threshold) ci |= 1;
       if (ci === 0 || ci === 15) continue;
 
+      // Asymptotic decider for saddle points (cases 5 and 10).
+      // Uses bilinear interpolation center value to resolve ambiguity.
+      // Nielson & Hamann: Q = TL*BR - BL*TR determines correct diagonal.
+      if (ci === 5 || ci === 10) {
+        const center = (tl + tr + br + bl) * 0.25;
+        if ((ci === 5 && center >= threshold) || (ci === 10 && center < threshold)) {
+          ci = 15 - ci; // 5 ↔ 10: swap diagonal connection
+        }
+      }
+
       const ep = [
         [lerp(x, x + 1, tl, tr, threshold), y],
         [x + 1, lerp(y, y + 1, tr, br, threshold)],

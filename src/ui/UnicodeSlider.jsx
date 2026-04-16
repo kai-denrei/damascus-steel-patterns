@@ -20,9 +20,9 @@ export default function UnicodeSlider({ label, value, onChange, min, max, step =
   const percent = Math.round(normalized * 100);
 
   const handleClick = (blockIndex) => {
-    const newNorm = (blockIndex + 0.5) / blocks;
+    // Map block index to value: first block = min, last block = max
+    const newNorm = blocks <= 1 ? 1 : blockIndex / (blocks - 1);
     let newVal = min + newNorm * range;
-    // Snap to step
     newVal = Math.round(newVal / step) * step;
     newVal = Math.max(min, Math.min(max, newVal));
     onChange(newVal);
