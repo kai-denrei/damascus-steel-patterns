@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BLADE ANATOMY — Damascus Pattern Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #0d0b09;
+  --bg-panel:    #131110;
+  --border:      #2a2520;
+  --border-mid:  #3e3830;
+  --text:        #c8b89a;
+  --text-dim:    #6b5e50;
+  --text-dimmer: #3a3028;
+  --amber:       #e8a020;
+  --amber-mid:   #b87a16;
+  --amber-dim:   #7a5010;
+  --steel:       #8a8880;
+  --edge:        #d8d4cc;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'JetBrains Mono',monospace;
+  font-size:14px;
+  line-height:1.65;
+  max-width:1200px;
+  margin:0 auto;
+  padding:0 40px;
+}
+
+/* ── HEADER ── */
+.hdr{
+  padding:52px 0 36px;
+  border-bottom:1px solid var(--border);
+  margin-bottom:72px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+}
+.hdr-project{
+  font-size:.62rem;letter-spacing:.14em;color:var(--text-dimmer);
+  text-transform:uppercase;margin-bottom:10px;
+}
+.hdr h1{
+  font-size:2.1rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--amber);line-height:1;
+}
+.hdr-sub{font-size:.68rem;color:var(--text-dim);letter-spacing:.06em;margin-top:10px;}
+.hdr-right{font-size:.6rem;color:var(--text-dimmer);text-align:right;letter-spacing:.08em;line-height:2;}
+
+/* ── SECTIONS ── */
+.sec{margin-bottom:88px;}
+.sec-meta{display:flex;align-items:baseline;gap:16px;margin-bottom:6px;}
+.sec-num{font-size:.58rem;letter-spacing:.16em;color:var(--amber-dim);}
+.sec-tag{font-size:.58rem;letter-spacing:.14em;color:var(--text-dimmer);text-transform:uppercase;}
+.sec-title{
+  font-size:1.05rem;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text);
+  padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:32px;
+}
+
+/* ── BLADE DIAGRAM ── */
+.blade-wrap{
+  border:1px solid var(--border);background:var(--bg-panel);
+  padding:16px 24px 8px;overflow-x:auto;
+}
+.blade-wrap svg{display:block;width:100%;min-width:900px;max-width:1100px;margin:0 auto;}
+
+/* ── ZONE DIAGRAM ── */
+.zone-wrap{
+  border:1px solid var(--border);background:var(--bg-panel);
+  padding:24px;overflow-x:auto;
+}
+.zone-wrap svg{display:block;width:100%;min-width:700px;max-width:900px;margin:0 auto;}
+.zone-desc-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:1px;background:var(--border);border:1px solid var(--border);margin-top:1px;
+}
+.zone-desc{background:var(--bg-panel);padding:18px 20px;}
+.zone-desc-name{
+  font-size:.68rem;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;margin-bottom:4px;
+}
+.zone-desc-name.forte{color:#c07030;}
+.zone-desc-name.middle{color:var(--steel);}
+.zone-desc-name.foible{color:#5888a8;}
+.zone-desc-latin{font-size:.6rem;color:var(--text-dimmer);font-style:italic;margin-bottom:10px;}
+.zone-desc p{font-size:.65rem;color:var(--text-dim);line-height:1.65;}
+
+/* ── GRIND GRID ── */
+.grind-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:1px;background:var(--border);border:1px solid var(--border);
+}
+.grind-card{background:var(--bg-panel);padding:20px 20px 22px;}
+.grind-card svg{display:block;width:100%;max-width:190px;margin:0 auto 14px;}
+.grind-name{
+  font-size:.7rem;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--amber);margin-bottom:8px;
+}
+.grind-card p{font-size:.64rem;color:var(--text-dim);line-height:1.65;}
+
+/* ── GLOSSARY ── */
+.gloss-table{
+  width:100%;border-collapse:collapse;font-size:.67rem;border:1px solid var(--border);
+}
+.gloss-table thead th{
+  text-align:left;padding:10px 16px;font-size:.58rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--text-dimmer);font-weight:400;
+  border-bottom:1px solid var(--border);background:var(--bg-panel);
+}
+.gloss-table tbody tr{border-bottom:1px solid var(--border);}
+.gloss-table tbody tr:hover td{background:var(--bg-panel);}
+.gloss-table td{padding:10px 16px;vertical-align:top;color:var(--text-dim);}
+.gloss-table td:first-child{color:var(--amber);white-space:nowrap;letter-spacing:.04em;font-weight:500;}
+
+/* ── NOTES ── */
+.notes-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);
+  gap:1px;background:var(--border);border:1px solid var(--border);
+}
+.note-card{background:var(--bg-panel);padding:22px 24px;}
+.note-num{font-size:.58rem;color:var(--amber-dim);letter-spacing:.12em;margin-bottom:6px;}
+.note-title{
+  font-size:.72rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--text);margin-bottom:10px;
+}
+.note-card p{font-size:.64rem;color:var(--text-dim);line-height:1.7;}
+.note-card code{
+  font-family:'JetBrains Mono',monospace;font-size:.62rem;
+  color:var(--amber-mid);background:var(--bg);padding:1px 5px;border:1px solid var(--border);
+}
+
+/* ── FOOTER ── */
+.ftr{
+  border-top:1px solid var(--border);padding:28px 0 52px;
+  display:flex;justify-content:space-between;
+  font-size:.58rem;color:var(--text-dimmer);letter-spacing:.1em;
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div>
+    <div class="hdr-project">Damascus Pattern Simulator · Reference Document</div>
+    <h1>Blade Anatomy</h1>
+    <div class="hdr-sub">Nomenclature · Geometry · Cross-Section Profiles · Rendering Notes</div>
+  </div>
+  <div class="hdr-right">
+    DROP POINT · KNIFE / SWORD / KATANA<br>
+    v0.1 · 2026
+  </div>
+</header>
+
+
+<!-- ═══════════════════ 01 — PART ANATOMY ═══════════════════ -->
+<section class="sec">
+  <div class="sec-meta">
+    <span class="sec-num">01 / 05</span>
+    <span class="sec-tag">Part diagram</span>
+  </div>
+  <div class="sec-title">Part Anatomy</div>
+
+  <div class="blade-wrap">
+    <svg viewBox="0 0 1100 468" xmlns="http://www.w3.org/2000/svg"
+         font-family="'JetBrains Mono',monospace">
+      <defs>
+        <linearGradient id="bladeBody" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="#2a2826"/>
+          <stop offset="20%"  stop-color="#565450"/>
+          <stop offset="47%"  stop-color="#8e8c88"/>
+          <stop offset="68%"  stop-color="#767470"/>
+          <stop offset="88%"  stop-color="#484642"/>
+          <stop offset="100%" stop-color="#24221e"/>
+        </linearGradient>
+        <linearGradient id="bevelFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="#58564e" stop-opacity=".65"/>
+          <stop offset="100%" stop-color="#1c1a16" stop-opacity=".85"/>
+        </linearGradient>
+        <linearGradient id="fullerFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="#181614"/>
+          <stop offset="50%"  stop-color="#0c0a08"/>
+          <stop offset="100%" stop-color="#181614"/>
+        </linearGradient>
+        <clipPath id="bc">
+          <path d="M 80,138 L 820,130 Q 888,130 926,192 C 592,282 272,314 80,308 Z"/>
+        </clipPath>
+        <marker id="dot" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5">
+          <circle cx="2.5" cy="2.5" r="1.8" fill="#e8a020" opacity=".7"/>
+        </marker>
+        <marker id="dot2" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5">
+          <circle cx="2.5" cy="2.5" r="1.8" fill="#c8b89a" opacity=".55"/>
+        </marker>
+      </defs>
+
+      <!-- Blade body -->
+      <path d="M 80,138 L 820,130 Q 888,130 926,192 C 592,282 272,314 80,308 Z"
+            fill="url(#bladeBody)"/>
+      <!-- Bevel overlay -->
+      <path d="M 80,260 C 280,257 590,236 892,202 C 592,282 272,314 80,308 Z"
+            fill="url(#bevelFill)"/>
+      <!-- Fuller groove -->
+      <path d="M 122,172 C 305,168 582,160 764,157 L 764,183 C 582,186 305,194 122,198 Z"
+            clip-path="url(#bc)" fill="url(#fullerFill)"/>
+      <path d="M 122,172 C 305,168 582,160 764,157"
+            fill="none" stroke="#484640" stroke-width=".8" opacity=".45" clip-path="url(#bc)"/>
+      <path d="M 122,198 C 305,194 582,186 764,183"
+            fill="none" stroke="#484640" stroke-width=".8" opacity=".45" clip-path="url(#bc)"/>
+      <!-- Ricasso zone -->
+      <path d="M 80,138 L 162,136 L 162,260 L 80,260 Z"
+            fill="#282620" clip-path="url(#bc)" opacity=".55"/>
+      <!-- Plunge line -->
+      <line x1="162" y1="130" x2="162" y2="308"
+            stroke="#686460" stroke-width="1.1" clip-path="url(#bc)" opacity=".6"/>
+
+      <!-- Outline: spine -->
+      <path d="M 80,138 L 820,130 Q 888,130 926,192"
+            fill="none" stroke="#9a9894" stroke-width="1.6"/>
+      <!-- Outline: belly/edge -->
+      <path d="M 80,308 C 272,314 592,282 926,194"
+            fill="none" stroke="#c4c0ba" stroke-width="2"/>
+      <!-- Edge gleam -->
+      <path d="M 80,308 C 272,314 592,282 926,194"
+            fill="none" stroke="#eeebe6" stroke-width=".5" opacity=".38"/>
+      <!-- Heel vertical -->
+      <line x1="80" y1="138" x2="80" y2="308" stroke="#706e6a" stroke-width="1.3"/>
+      <!-- Bevel line dashed -->
+      <path d="M 80,260 C 280,257 590,236 892,202"
+            fill="none" stroke="#555250" stroke-width=".9" stroke-dasharray="7,5"/>
+
+      <!-- Zone brackets -->
+      <text x="267" y="100" text-anchor="middle"
+            fill="#8a5e38" font-size="8" letter-spacing="3">FORTE · STRONG</text>
+      <line x1="80"  y1="112" x2="456" y2="112" stroke="#6a4830" stroke-width=".8"/>
+      <line x1="80"  y1="107" x2="80"  y2="117" stroke="#6a4830" stroke-width=".8"/>
+      <line x1="456" y1="107" x2="456" y2="117" stroke="#6a4830" stroke-width=".8"/>
+
+      <text x="537" y="100" text-anchor="middle"
+            fill="#44403a" font-size="7.5" letter-spacing="2">MIDDLE</text>
+      <line x1="456" y1="112" x2="618" y2="112"
+            stroke="#3e3a34" stroke-width=".7" stroke-dasharray="4,3"/>
+
+      <text x="762" y="100" text-anchor="middle"
+            fill="#385468" font-size="8" letter-spacing="3">FOIBLE · WEAK</text>
+      <line x1="618" y1="112" x2="904" y2="112" stroke="#364858" stroke-width=".8"/>
+      <line x1="618" y1="107" x2="618" y2="117" stroke="#364858" stroke-width=".8"/>
+      <line x1="904" y1="107" x2="904" y2="117" stroke="#364858" stroke-width=".8"/>
+
+      <!-- SPINE annotation -->
+      <line x1="425" y1="130" x2="425" y2="66"
+            stroke="#e8a020" stroke-width=".7" opacity=".45" marker-start="url(#dot)"/>
+      <text x="425" y="58" text-anchor="middle"
+            fill="#e8a020" font-size="9.5" letter-spacing="2">SPINE / BACK</text>
+
+      <!-- FULLER annotation -->
+      <line x1="510" y1="178" x2="635" y2="55"
+            stroke="#c8b89a" stroke-width=".7" opacity=".32" marker-start="url(#dot2)"/>
+      <text x="665" y="50" text-anchor="start"
+            fill="#c8b89a" font-size="9" letter-spacing="1.5">FULLER</text>
+
+      <!-- TIP annotation -->
+      <line x1="926" y1="192" x2="975" y2="192"
+            stroke="#e8a020" stroke-width=".7" opacity=".5" marker-start="url(#dot)"/>
+      <text x="983" y="197" text-anchor="start"
+            fill="#e8a020" font-size="9.5" letter-spacing="2">TIP</text>
+
+      <!-- HEEL -->
+      <line x1="80" y1="308" x2="80" y2="352"
+            stroke="#e8a020" stroke-width=".7" opacity=".38" marker-start="url(#dot)"/>
+      <text x="80" y="366" text-anchor="middle"
+            fill="#c8b89a" font-size="8.5" letter-spacing="1.5">HEEL</text>
+
+      <!-- RICASSO -->
+      <line x1="122" y1="292" x2="122" y2="390"
+            stroke="#c8b89a" stroke-width=".7" opacity=".3" marker-start="url(#dot2)"/>
+      <text x="122" y="402" text-anchor="middle"
+            fill="#c8b89a" font-size="8.5" letter-spacing="1.5">RICASSO</text>
+
+      <!-- PLUNGE LINE -->
+      <line x1="162" y1="258" x2="220" y2="428"
+            stroke="#c8b89a" stroke-width=".7" opacity=".3" marker-start="url(#dot2)"/>
+      <text x="224" y="440" text-anchor="start"
+            fill="#c8b89a" font-size="8.5" letter-spacing="1.5">PLUNGE LINE</text>
+
+      <!-- BEVEL / GRIND -->
+      <line x1="378" y1="256" x2="348" y2="392"
+            stroke="#e8a020" stroke-width=".7" opacity=".38" marker-start="url(#dot)"/>
+      <text x="348" y="405" text-anchor="middle"
+            fill="#c8b89a" font-size="8.5" letter-spacing="1.5">BEVEL / GRIND</text>
+
+      <!-- CHEEK / FLAT -->
+      <line x1="472" y1="206" x2="484" y2="430"
+            stroke="#c8b89a" stroke-width=".7" opacity=".28" marker-start="url(#dot2)"/>
+      <text x="484" y="443" text-anchor="middle"
+            fill="#c8b89a" font-size="8.5" letter-spacing="1.5">CHEEK / FLAT</text>
+
+      <!-- BELLY -->
+      <line x1="615" y1="284" x2="615" y2="395"
+            stroke="#e8a020" stroke-width=".7" opacity=".38" marker-start="url(#dot)"/>
+      <text x="615" y="408" text-anchor="middle"
+            fill="#c8b89a" font-size="8.5" letter-spacing="1.5">BELLY</text>
+
+      <!-- EDGE / HA -->
+      <line x1="758" y1="270" x2="758" y2="430"
+            stroke="#e8a020" stroke-width=".7" opacity=".44" marker-start="url(#dot)"/>
+      <text x="758" y="443" text-anchor="middle"
+            fill="#ccc8c2" font-size="8.5" letter-spacing="1.5">EDGE / HA</text>
+
+      <!-- KISSAKI -->
+      <line x1="920" y1="222" x2="952" y2="370"
+            stroke="#c8b89a" stroke-width=".7" opacity=".28" marker-start="url(#dot2)"/>
+      <text x="957" y="382" text-anchor="start"
+            fill="#c8b89a" font-size="8.5" letter-spacing="1.5">KISSAKI</text>
+
+      <!-- Nagasa dimension -->
+      <line x1="80"  y1="332" x2="926" y2="332" stroke="#2c2824" stroke-width=".8"/>
+      <line x1="80"  y1="326" x2="80"  y2="338" stroke="#2c2824" stroke-width=".8"/>
+      <line x1="926" y1="326" x2="926" y2="338" stroke="#2c2824" stroke-width=".8"/>
+      <text x="503" y="347" text-anchor="middle"
+            fill="#3c3626" font-size="7.5" letter-spacing="2.5">NAGASA · BLADE LENGTH</text>
+    </svg>
+  </div>
+</section>
+
+
+<!-- ═══════════════════ 02 — GLOSSARY ═══════════════════ -->
+<section class="sec">
+  <div class="sec-meta">
+    <span class="sec-num">02 / 05</span>
+    <span class="sec-tag">Nomenclature</span>
+  </div>
+  <div class="sec-title">Part Glossary</div>
+
+  <table class="gloss-table">
+    <thead>
+      <tr>
+        <th>Part</th>
+        <th>Also known as</th>
+        <th>Description</th>
+        <th>Rendering relevance</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Spine</td>
+        <td>Back, Mune (J), Ridge</td>
+        <td>The thick, unsharpened top edge. Provides structural rigidity. Typically 3–6 mm on a knife, considerably more on a sword or machete.</td>
+        <td>Top curve definition. Warm grey stroke — steel reflecting sky. No edge gleam here.</td>
+      </tr>
+      <tr>
+        <td>Belly</td>
+        <td>Ha (J), Edge curve</td>
+        <td>The curved cutting edge. A chef knife's rocker profile is defined by belly geometry. Also refers to the convex arc of the cutting edge in aggregate, separate from the edge line itself.</td>
+        <td>Bottom curve definition. Brightest edge gleam — polished steel at its thinnest cross-section.</td>
+      </tr>
+      <tr>
+        <td>Cheek / Flat</td>
+        <td>Ji (J), Face, Blade flat</td>
+        <td>The broad face between spine and bevel line. Largest visible surface area. Primary location of Damascus pattern display. The Ji on a katana is geometrically distinct — defined by the shinogi ridge.</td>
+        <td>Primary metallic gradient zone. Pattern texture maps here. Anisotropic reflection runs parallel to edge axis, not radially.</td>
+      </tr>
+      <tr>
+        <td>Bevel / Grind</td>
+        <td>Hagane area, Primary bevel</td>
+        <td>The angled section from the cheek to the cutting edge. Grind type determines cross-section profile: hollow, flat, convex, scandi, sabre, or chisel — each requires distinct rendering treatment.</td>
+        <td>Secondary shading zone, darker than cheek. Grind type determines gradient curvature. Shoulder highlight moves with grind geometry.</td>
+      </tr>
+      <tr>
+        <td>Fuller</td>
+        <td>Bo-Hi (J), Groove</td>
+        <td>A longitudinal groove pressed or ground into the cheek. An I-beam effect: removes mass from the neutral axis while preserving structural rigidity. "Blood groove" is a persistent myth with no mechanical basis.</td>
+        <td>Inset shadow groove: dark fill center, AO shadow on upper lip, specular highlight on lower lip. Should read as physically depressed — not painted.</td>
+      </tr>
+      <tr>
+        <td>Ricasso</td>
+        <td>Shoulder, Unsharpened heel</td>
+        <td>Flat, unsharpened section immediately above the guard. Allows safe finger-on-blade grip (Italian finger grip, Italian school) for precision point control. Common on daggers, hunting knives, some longswords.</td>
+        <td>No bevel gradient. Different luminosity from cheek — unfinished flat steel. Separated from active bevel by the plunge line stroke.</td>
+      </tr>
+      <tr>
+        <td>Choil</td>
+        <td>—</td>
+        <td>A notch or radius cutout at the base of the cutting edge where it meets the ricasso. Allows the sharpening stone to run the full edge length without the guard blocking. Also permits a finger-forward grip on shorter knives.</td>
+        <td>Small notch geometry in the belly curve at the heel junction. Often omitted in simplified renders but adds authenticity.</td>
+      </tr>
+      <tr>
+        <td>Plunge Line</td>
+        <td>Termination line</td>
+        <td>The vertical line where the grind terminates against the ricasso. A crisp, clean plunge line is a mark of precision grinding — it requires a steady hand and consistent wheel pressure. Sloppy plunge lines are a common tell of low-quality finishing.</td>
+        <td>Thin vertical separator stroke between ricasso and bevel zones. Carries strong signal of craftsmanship quality.</td>
+      </tr>
+      <tr>
+        <td>Tip / Point</td>
+        <td>Kissaki (J), Point</td>
+        <td>The convergence of spine and belly. Profile determines character: drop point, clip point, tanto, spear point, trailing point. The kissaki on a katana is a distinct geometric zone (boshi) with its own bevel system and hardening pattern.</td>
+        <td>Spine and belly pinch toward a common convergence point. Tip type changes the curvature and abruptness of the convergence path.</td>
+      </tr>
+      <tr>
+        <td>Hamon</td>
+        <td>Temper line, Nie, Nioi</td>
+        <td>The visible boundary between the hard edge steel (martensite) and the softer spine (pearlite) in differentially hardened Japanese blades. Produced by clay coating the spine before quench. The wavy, cloud-like hamon is nihonto's defining aesthetic feature.</td>
+        <td>A noise-generated organic path tracking near the bevel line. Pattern texture should render differently across the boundary — crisp in the hardened zone, loose above.</td>
+      </tr>
+      <tr>
+        <td>Shinogi</td>
+        <td>Ridge line</td>
+        <td>The prominent ridge running lengthwise on a katana, dividing the flat Ji from the Shinogi-ji (upper flat). Creates the characteristic shinogi-zukuri cross-section: angular, not a simple convex or flat grind. Absent on most Western blades.</td>
+        <td>Additional polyline for katana profile. Requires a separate polygon for the Shinogi-ji zone above the ridge.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+
+<!-- ═══════════════════ 03 — BLADE ZONES ═══════════════════ -->
+<section class="sec">
+  <div class="sec-meta">
+    <span class="sec-num">03 / 05</span>
+    <span class="sec-tag">Structural zones</span>
+  </div>
+  <div class="sec-title">Blade Zones</div>
+
+  <div class="zone-wrap">
+    <svg viewBox="0 0 900 196" xmlns="http://www.w3.org/2000/svg"
+         font-family="'JetBrains Mono',monospace">
+      <defs>
+        <clipPath id="bc2">
+          <path d="M 30,66 L 722,60 Q 792,60 832,112 C 584,152 224,166 30,158 Z"/>
+        </clipPath>
+      </defs>
+      <!-- Base blade -->
+      <path d="M 30,66 L 722,60 Q 792,60 832,112 C 584,152 224,166 30,158 Z"
+            fill="#363430"/>
+      <!-- Forte zone -->
+      <rect x="30" y="55" width="364" height="115" fill="#8a3808" opacity=".28" clip-path="url(#bc2)"/>
+      <!-- Middle zone -->
+      <rect x="394" y="55" width="148" height="115" fill="#585450" opacity=".14" clip-path="url(#bc2)"/>
+      <!-- Foible zone -->
+      <rect x="542" y="55" width="300" height="115" fill="#105078" opacity=".22" clip-path="url(#bc2)"/>
+      <!-- Zone dividers -->
+      <line x1="394" y1="58" x2="394" y2="162" stroke="#3c3832" stroke-width="1" stroke-dasharray="5,4"/>
+      <line x1="542" y1="57" x2="542" y2="158" stroke="#3c3832" stroke-width="1" stroke-dasharray="5,4"/>
+      <!-- Spine -->
+      <path d="M 30,66 L 722,60 Q 792,60 832,112" fill="none" stroke="#909088" stroke-width="1.4"/>
+      <!-- Belly -->
+      <path d="M 30,158 C 224,166 584,152 832,114" fill="none" stroke="#b4b0aa" stroke-width="1.8"/>
+      <!-- Edge gleam -->
+      <path d="M 30,158 C 224,166 584,152 832,114" fill="none" stroke="#e4e0dc" stroke-width=".5" opacity=".35"/>
+      <!-- Bevel dashed -->
+      <path d="M 30,133 C 224,130 570,118 806,108" fill="none" stroke="#555250" stroke-width=".8" stroke-dasharray="6,4"/>
+      <!-- Heel -->
+      <line x1="30" y1="66" x2="30" y2="158" stroke="#686462" stroke-width="1.2"/>
+      <!-- Zone labels -->
+      <text x="212" y="50" text-anchor="middle" fill="#b87040" font-size="10" letter-spacing="3" font-weight="700">FORTE</text>
+      <text x="468" y="50" text-anchor="middle" fill="#5c5850" font-size="9" letter-spacing="2">MIDDLE</text>
+      <text x="688" y="50" text-anchor="middle" fill="#407090" font-size="10" letter-spacing="3" font-weight="700">FOIBLE</text>
+      <!-- Brackets -->
+      <line x1="30"  y1="44" x2="394" y2="44" stroke="#6a4830" stroke-width=".7"/>
+      <line x1="30"  y1="40" x2="30"  y2="48" stroke="#6a4830" stroke-width=".7"/>
+      <line x1="394" y1="40" x2="394" y2="48" stroke="#6a4830" stroke-width=".7"/>
+      <line x1="394" y1="44" x2="542" y2="44" stroke="#443e38" stroke-width=".6" stroke-dasharray="3,3"/>
+      <line x1="542" y1="44" x2="824" y2="44" stroke="#38506a" stroke-width=".7"/>
+      <line x1="542" y1="40" x2="542" y2="48" stroke="#38506a" stroke-width=".7"/>
+      <line x1="824" y1="40" x2="824" y2="48" stroke="#38506a" stroke-width=".7"/>
+      <!-- % ranges -->
+      <text x="212" y="184" text-anchor="middle" fill="#4e3626" font-size="8" letter-spacing="1">0 – 40%</text>
+      <text x="468" y="184" text-anchor="middle" fill="#3c3830" font-size="8" letter-spacing="1">40 – 60%</text>
+      <text x="688" y="184" text-anchor="middle" fill="#2c3c4c" font-size="8" letter-spacing="1">60 – 100%</text>
+    </svg>
+  </div>
+
+  <div class="zone-desc-grid">
+    <div class="zone-desc">
+      <div class="zone-desc-name forte">Strong · Forte</div>
+      <div class="zone-desc-latin">also: ikomi · moto</div>
+      <p>Proximal third. Maximum cross-section and mass. Used for parrying, blocking, and heavy chopping cuts. In Western swordsmanship the forte controls the blade — mechanical advantage belongs to the swordsman who engages the opponent's foible with their forte. In pattern rendering, Damascus layers are widest and most legible here. Good for showcasing large-scale folding patterns.</p>
+    </div>
+    <div class="zone-desc">
+      <div class="zone-desc-name middle">Middle</div>
+      <div class="zone-desc-latin">transition zone</div>
+      <p>Center fifth. Width and cross-section taper steadily but retain mass. General-purpose cutting zone. In pattern rendering, the middle zone shows the most visually complex layer distortion — fold lines transition from wide, slow curves at the forte to tighter, more frequent curves approaching the foible. The most cinematically interesting region of the pattern.</p>
+    </div>
+    <div class="zone-desc">
+      <div class="zone-desc-name foible">Weak · Foible</div>
+      <div class="zone-desc-latin">also: monouchi (J) · saki</div>
+      <p>Distal third. Minimum cross-section, maximum velocity. Primary cutting zone for drawing and slicing. Damascus blades can fail here first under impact stress — delamination along fold interfaces at minimum cross-section. Pattern density and refinement should increase toward the tip to reflect structural layer compression under repeated forging reduction. A telling detail of material authenticity.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════ 04 — GRIND PROFILES ═══════════════════ -->
+<section class="sec">
+  <div class="sec-meta">
+    <span class="sec-num">04 / 05</span>
+    <span class="sec-tag">Cross-section geometry</span>
+  </div>
+  <div class="sec-title">Grind Profiles · Cross-Section</div>
+
+  <div class="grind-grid">
+
+    <div class="grind-card">
+      <svg viewBox="0 0 200 144" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gh" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#242220"/><stop offset="48%" stop-color="#706e68"/>
+            <stop offset="52%" stop-color="#848280"/><stop offset="100%" stop-color="#242220"/>
+          </linearGradient>
+        </defs>
+        <rect x="84" y="10" width="32" height="9" rx="1" fill="#484640"/>
+        <path d="M 84,19 L 55,76 Q 70,108 100,128 Q 130,108 145,76 L 116,19 Z" fill="url(#gh)"/>
+        <path d="M 55,76 Q 70,108 100,128" fill="none" stroke="#181614" stroke-width="2.2"/>
+        <path d="M 145,76 Q 130,108 100,128" fill="none" stroke="#181614" stroke-width="2.2"/>
+        <line x1="85" y1="11" x2="115" y2="11" stroke="#7a7874" stroke-width=".8"/>
+        <circle cx="100" cy="128" r="1.6" fill="#c4c0ba"/>
+        <text x="100" y="8"   text-anchor="middle" fill="#4a4440" font-family="'JetBrains Mono',monospace" font-size="7.5" letter-spacing="1.5">SPINE</text>
+        <text x="100" y="139" text-anchor="middle" fill="#4a4440" font-family="'JetBrains Mono',monospace" font-size="7.5" letter-spacing="1.5">EDGE</text>
+      </svg>
+      <div class="grind-name">Hollow Grind</div>
+      <p>Concave bevel — ground on a spinning wheel. Produces an extremely fine, thin edge. Common on straight razors and hunting knives. Excellent for slicing. The concavity is a self-sharpening geometry: progressive honing maintains the edge angle automatically.</p>
+    </div>
+
+    <div class="grind-card">
+      <svg viewBox="0 0 200 144" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gf" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#242220"/><stop offset="46%" stop-color="#706e68"/>
+            <stop offset="54%" stop-color="#848280"/><stop offset="100%" stop-color="#242220"/>
+          </linearGradient>
+        </defs>
+        <rect x="84" y="10" width="32" height="9" rx="1" fill="#484640"/>
+        <path d="M 84,19 L 100,128 L 116,19 Z" fill="url(#gf)"/>
+        <path d="M 84,19 L 84,10 L 116,10 L 116,19 Z" fill="#484640"/>
+        <line x1="85" y1="11" x2="115" y2="11" stroke="#7a7874" stroke-width=".8"/>
+        <circle cx="100" cy="128" r="1.6" fill="#c4c0ba"/>
+        <text x="100" y="8"   text-anchor="middle" fill="#4a4440" font-family="'JetBrains Mono',monospace" font-size="7.5" letter-spacing="1.5">SPINE</text>
+        <text x="100" y="139" text-anchor="middle" fill="#4a4440" font-family="'JetBrains Mono',monospace" font-size="7.5" letter-spacing="1.5">EDGE</text>
+      </svg>
+      <div class="grind-name">Flat Grind</div>
+      <p>Straight taper from spine to edge on both faces. Maximum steel removal. Strong, versatile geometry — the workhorse of quality kitchen knives and production blades. Ideal for Damascus display: pattern visible across the full face. Sharpenable on any flat stone.</p>
+    </div>
+
+    <div class="grind-card">
+      <svg viewBox="0 0 200 144" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gcx" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#242220"/><stop offset="42%" stop-color="#686460"/>
+            <stop offset="50%" stop-color="#848280"/><stop offset="58%" stop-color="#686460"/>
+            <stop offset="100%" stop-color="#242220"/>
+          </linearGradient>
+        </defs>
+        <rect x="84" y="10" width="32" height="9" rx="1" fill="#484640"/>
+        <path d="M 84,19 C 72,52 88,104 100,128 C 112,104 128,52 116,19 Z" fill="url(#gcx)"/>
+        <path d="M 84,19 L 84,10 L 116,10 L 116,19 Z" fill="#484640"/>
+        <line x1="85" y1="11" x2="115" y2="11" stroke="#7a7874" stroke-width=".8"/>
+        <circle cx="100" cy="128" r="1.6" fill="#c4c0ba"/>
+        <text x="100" y="8"   text-anchor="middle" fill="#4a4440" font-family="'JetBrains Mono',monospace" font-size="7.5" letter-spacing="1.5">SPINE</text>
+        <text x="100" y="139" text-anchor="middle" fill="#4a4440" font-family="'JetBrains Mono',monospace" font-size="7.5" letter-spacing="1.5">EDGE</text>
+      </svg>
+      <div class="grind-name">Convex / Appleseed Grind</div>
+      <p>Faces bow outward — biconvex lens cross-section. Thickest and most durable grind geometry. Standard for axes, machetes, and heavy field blades. Convex geometry deflects material away from the edge during cuts, reducing binding. Requires freehand sharpening on a strop.</p>
+    </div>
+
+    <div class="grind-card">
+      <svg viewBox="0 0 200 144" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gsc" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#242220"/><stop offset="38%" stop-color="#585450"/>
+            <stop offset="50%" stop-color="#787470"/><stop offset="62%" stop-color="#585450"/>
+            <stop offset="100%" stop-color="#242220"/>
+          </linearGradient>
+        </defs>
+        <rect x="84" y="10" width="32" height="9" rx="1" fill="#484640"/>
+        <path d="M 84,19 L 58,86 L 100,128 L 142,86 L 116,19 Z" fill="url(#gsc)"/>
+        <path d="M 84,19 L 84,10 L 116,10 L 116,19 Z" fill="#484640"/>
+        <line x1="58" y1="86" x2="142" y2="86"
+              stroke="#2c2a26" stroke-width=".9" stroke-dasharray="4,3" opacity=".55"/>
+        <line x1="85" y1="11" x2="115" y2="11" stroke="#7a7874" stroke-width=".8"/>
+        <circle cx="100" cy="128" r="1.6" fill="#c4c0ba"/>
+        <text x="100" y="8"   text-anchor="middle" fill="#4a4440" font-family="'JetBrains Mono',monospace" font-size="7.5" letter-spacing="1.5">SPINE</text>
+        <text x="100" y="139" text-anchor="middle" fill="#4a4440" font-family="'JetBrains Mono',monospace" font-size="7.5" letter-spacing="1.5">EDGE</text>
+        <text x="100" y="90"  text-anchor="middle" fill="#363430" font-family="'JetBrains Mono',monospace" font-size="7">bevel shoulder</text>
+      </svg>
+      <div class="grind-name">Scandi / Scandinavian Grind</div>
+      <p>Flat cheeks to a wide, flat primary bevel — no secondary bevel. The bevel plane meets the edge directly. Scandinavian bushcraft tradition. Sharpenable on any flat stone without technique: lay the bevel flat and push. The pronounced bevel shoulder is a strong visual feature in renders.</p>
+    </div>
+
+    <div class="grind-card">
+      <svg viewBox="0 0 200 144" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gsb" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#242220"/><stop offset="44%" stop-color="#686460"/>
+            <stop offset="50%" stop-color="#828080"/><stop offset="56%" stop-color="#686460"/>
+            <stop offset="100%" stop-color="#242220"/>
+          </linearGradient>
+        </defs>
+        <rect x="84" y="10" width="32" height="9" rx="1" fill="#484640"/>
+        <path d="M 84,19 L 67,68 L 100,128 L 133,68 L 116,19 Z" fill="url(#gsb)"/>
+        <path d="M 84,19 L 84,10 L 116,10 L 116,19 Z" fill="#484640"/>
+        <line x1="67" y1="68" x2="133" y2="68"
+              stroke="#2c2a26" stroke-width=".9" stroke-dasharray="4,3" opacity=".55"/>
+        <line x1="85" y1="11" x2="115" y2="11" stroke="#7a7874" stroke-width=".8"/>
+        <circle cx="100" cy="128" r="1.6" fill="#c4c0ba"/>
+        <text x="100" y="8"   text-anchor="middle" fill="#4a4440" font-family="'JetBrains Mono',monospace" font-size="7.5" letter-spacing="1.5">SPINE</text>
+        <text x="100" y="139" text-anchor="middle" fill="#4a4440" font-family="'JetBrains Mono',monospace" font-size="7.5" letter-spacing="1.5">EDGE</text>
+      </svg>
+      <div class="grind-name">Sabre Grind</div>
+      <p>Flat cheeks to the midline, then a flat bevel to the edge. Retains more mass than a full flat while producing a capable edge. Common on military and tactical blades. The abrupt geometry change at the bevel shoulder produces a strong highlight ridge in renders — a useful visual landmark for shading logic.</p>
+    </div>
+
+    <div class="grind-card">
+      <svg viewBox="0 0 200 144" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gch" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#282624"/><stop offset="72%" stop-color="#808078"/>
+            <stop offset="100%" stop-color="#565452"/>
+          </linearGradient>
+        </defs>
+        <rect x="84" y="10" width="32" height="9" rx="1" fill="#484640"/>
+        <path d="M 84,10 L 84,128 L 100,128 L 116,19 L 116,10 Z" fill="url(#gch)"/>
+        <line x1="84" y1="10" x2="84" y2="128" stroke="#5a5854" stroke-width="1.3"/>
+        <line x1="116" y1="68" x2="84" y2="68"
+              stroke="#2c2a26" stroke-width=".8" stroke-dasharray="4,3" opacity=".45"/>
+        <line x1="85" y1="11" x2="115" y2="11" stroke="#7a7874" stroke-width=".8"/>
+        <circle cx="100" cy="128" r="1.6" fill="#c4c0ba"/>
+        <text x="100" y="8"   text-anchor="middle" fill="#4a4440" font-family="'JetBrains Mono',monospace" font-size="7.5" letter-spacing="1.5">SPINE</text>
+        <text x="100" y="139" text-anchor="middle" fill="#4a4440" font-family="'JetBrains Mono',monospace" font-size="7.5" letter-spacing="1.5">EDGE</text>
+        <text x="78"  y="72"  text-anchor="end"   fill="#343230" font-family="'JetBrains Mono',monospace" font-size="7">flat</text>
+        <text x="122" y="72"  text-anchor="start" fill="#343230" font-family="'JetBrains Mono',monospace" font-size="7">bevel</text>
+      </svg>
+      <div class="grind-name">Chisel Grind</div>
+      <p>One face entirely flat; the other carries the bevel. Japanese single-bevel kitchen knives, chisels, and some tanto configurations. The flat face is a near-perfect mirror in renders — strong lighting asymmetry. Pattern appears on the bevel face only; the flat face reflects environment.</p>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ═══════════════════ 05 — RENDERING NOTES ═══════════════════ -->
+<section class="sec">
+  <div class="sec-meta">
+    <span class="sec-num">05 / 05</span>
+    <span class="sec-tag">Technical / simulator</span>
+  </div>
+  <div class="sec-title">Rendering Implications</div>
+
+  <div class="notes-grid">
+    <div class="note-card">
+      <div class="note-num">01</div>
+      <div class="note-title">Replace Parametric Points with Bézier Paths</div>
+      <p>The current 81-point sampling approximates what a cubic Bézier handles analytically with 4 control points per curve. Replacing the three curves (spine, belly, bevel) with <code>Path2D</code> Bézier segments eliminates staircase artifacts at high zoom, reduces data from 243 floats to 12 control points, and makes the profile editable in Inkscape or Illustrator for custom shapes. Drop-point spine: <code>M x0,y0 L x1,y1 Q cx,cy xtip,ytip</code>. Belly: <code>M x0,y3 C c1x,c1y c2x,c2y xtip,ytip</code>. The tip convergence is implicit: both curves end at the same coordinate.</p>
+    </div>
+    <div class="note-card">
+      <div class="note-num">02</div>
+      <div class="note-title">Grind-Aware Bevel Shading</div>
+      <p>The current bevel zone uses a flat <code>rgba(140,140,150)</code> multiply fill regardless of grind type. A grind-aware shading pass computes the surface normal at each point on the bevel according to its cross-section geometry, then applies a gradient that follows the normal's reflection of a fixed environment map (warm-grey sky above, dark ground below). A <code>grindType</code> enum with 6 values (hollow/flat/convex/scandi/sabre/chisel) maps to 6 distinct gradient shapes and bevel shoulder positions. This single change dramatically increases rendering realism.</p>
+    </div>
+    <div class="note-card">
+      <div class="note-num">03</div>
+      <div class="note-title">Fuller as Ambient Occlusion Groove</div>
+      <p>Currently absent from the render. A fuller should render in layers: (1) a dark fill for the groove interior, (2) a thin AO shadow stripe on the upper lip where the groove undercuts the cheek surface, (3) a subtle specular highlight on the lower lip where the groove curves back toward the viewer. The result reads as physically depressed steel — not a painted stripe. Fuller width, depth centerline offset, and start/end along the blade should be independent parameters from the pattern system. A sensible default: centerline at 38% from spine to bevel, running from 8% to 75% of blade length.</p>
+    </div>
+    <div class="note-card">
+      <div class="note-num">04</div>
+      <div class="note-title">Blade Profile Presets</div>
+      <p>The current geometry is a chef-knife rocker with a drop point, encoded as 8 hardcoded constants. A preset bank of 4 Bézier profiles covers the primary design space: <strong>drop point</strong> (current — spine curves down at ~85%), <strong>clip point</strong> (spine dips from ~65% with a sharpened clip line), <strong>tanto</strong> (no belly rocker, angular secondary belly meeting an angled tip), <strong>spear point</strong> (symmetric — spine mirrors belly). Each preset is a JSON object of 12 Bézier control points. The <code>bladeProfile</code> selector becomes the outermost layer of the parametric stack, above the pattern parameters.</p>
+    </div>
+    <div class="note-card">
+      <div class="note-num">05</div>
+      <div class="note-title">Hamon as Noise Layer</div>
+      <p>For Japanese blade profiles, the hamon is the most distinctive visual feature — never a clean geometric line but an organic cloud-like boundary (nie/nioi) billowing between hardened edge and soft spine. This maps directly to the existing Perlin/domain-warp infrastructure: generate a wavy path tracking <code>bevelY</code> with ±20px amplitude, render a soft luminosity gradient on both sides. The pattern texture renders differently across the hamon boundary: crisp tight lines in the hardened martensite zone below; looser, slower deformation lines in the pearlitic spine above. A toggle, not a permanent feature — only appropriate on Japanese-profile blades.</p>
+    </div>
+    <div class="note-card">
+      <div class="note-num">06</div>
+      <div class="note-title">Edge Gleam and Anisotropic Reflection</div>
+      <p>Polished steel exhibits anisotropic reflection: highlights run parallel to the grinding direction, not radially. The cheek of a flat-ground blade shows horizontal hairline-brightness bands rather than circular hotspots. In practice: render the metallic shading gradient as anisotropic, parallel to the blade length axis. Additionally, the cutting edge at minimum cross-section reflects light as a bright thin line — the thinner the steel, the brighter this gleam. The edge gleam stroke: <code>#f0ece6</code>, 0.5–1px, applied over the belly path as the final composite layer at 35–40% opacity. It should look like the edge is catching the light, not like a painted highlight.</p>
+    </div>
+  </div>
+</section>
+
+
+<footer class="ftr">
+  <span>DAMASCUS PATTERN SIMULATOR · BLADE ANATOMY REFERENCE · v0.1</span>
+  <span>2026</span>
+</footer>
+
+</body>
+</html>

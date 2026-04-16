@@ -98,7 +98,8 @@ function buildBladePath(spine, belly) {
 }
 
 // ═══════════════════════════════════════════
-// Blade renderer — full bevel with metallic shading
+// Blade renderer — anisotropic shading, fuller, edge gleam
+// Based on blade-rendering-research.md
 // ═══════════════════════════════════════════
 async function renderBlade(canvas, recipe, textureScale, vecSettings) {
   const ctx = canvas.getContext('2d');
@@ -112,51 +113,110 @@ async function renderBlade(canvas, recipe, textureScale, vecSettings) {
 
   const { spine, belly, bevelLine } = bladeGeometry(W, H);
   const bladePath = buildBladePath(spine, belly);
+  const numPts = spine.length;
 
+  // ── 1. Damascus texture clipped to blade ──
   ctx.save();
   ctx.clip(bladePath);
   ctx.drawImage(texImg, 0, 0, W, H);
 
-  // Metallic shading
-  const cx = W / 2, cy = H / 2;
-  const sg = ctx.createLinearGradient(cx, cy - H * 0.4, cx, cy + H * 0.4);
-  sg.addColorStop(0, 'rgba(255,255,255,0.12)');
-  sg.addColorStop(0.2, 'rgba(255,255,255,0.06)');
-  sg.addColorStop(0.5, 'rgba(0,0,0,0)');
-  sg.addColorStop(0.8, 'rgba(0,0,0,0.15)');
-  sg.addColorStop(1, 'rgba(0,0,0,0.08)');
-  ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H);
-
-  const sp = ctx.createLinearGradient(cx, cy - H * 0.3, cx, cy - H * 0.1);
-  sp.addColorStop(0, 'rgba(255,255,255,0)');
-  sp.addColorStop(0.5, 'rgba(255,255,255,0.11)');
-  sp.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.globalCompositeOperation = 'screen';
-  ctx.fillStyle = sp; ctx.fillRect(0, 0, W, H);
+  // ── 2. Anisotropic metallic gradient (research 2e) ──
+  // Gradient runs spine→belly (perpendicular to blade axis), not radially.
+  // Mimics how polished steel reflects: bright band on cheek, dark at spine/edge.
+  // Use the blade's average spine/belly Y to orient the gradient.
+  const midIdx = Math.floor(numPts * 0.4);
+  const spineAvgY = spine[midIdx][1];
+  const bellyAvgY = belly[midIdx][1];
+  const anisoGrad = ctx.createLinearGradient(0, spineAvgY, 0, bellyAvgY);
+  anisoGrad.addColorStop(0.0, 'rgba(58,56,54,0.4)');    // spine region: darker
+  anisoGrad.addColorStop(0.15, 'rgba(154,152,144,0.18)'); // first reflection
+  anisoGrad.addColorStop(0.35, 'rgba(212,208,202,0.12)'); // primary cheek hotspot
+  anisoGrad.addColorStop(0.55, 'rgba(122,120,116,0.15)'); // mid-cheek
+  anisoGrad.addColorStop(0.72, 'rgba(42,40,36,0.35)');    // bevel transition: dark
+  anisoGrad.addColorStop(0.88, 'rgba(20,18,16,0.4)');     // edge zone: darkest
+  anisoGrad.addColorStop(1.0, 'rgba(42,40,36,0.2)');      // very edge: slightly lighter
   ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = anisoGrad; ctx.fillRect(0, 0, W, H);
 
-  // Bevel zone
+  // ── 3. Bevel zone — grind-aware shading ──
   const bevelPath = new Path2D();
   bevelPath.moveTo(bevelLine[0][0], bevelLine[0][1]);
   for (let i = 1; i < bevelLine.length; i++) bevelPath.lineTo(bevelLine[i][0], bevelLine[i][1]);
   for (let i = belly.length - 1; i >= 0; i--) bevelPath.lineTo(belly[i][0], belly[i][1]);
   bevelPath.closePath();
+
+  // Bevel gets a gradient from shoulder to edge (not flat multiply)
+  ctx.save();
+  ctx.clip(bevelPath);
+  const bevelGrad = ctx.createLinearGradient(0, bevelLine[midIdx][1], 0, belly[midIdx][1]);
+  bevelGrad.addColorStop(0, 'rgba(88,86,78,0.5)');   // shoulder highlight
+  bevelGrad.addColorStop(0.15, 'rgba(40,38,34,0.55)'); // steep drop
+  bevelGrad.addColorStop(0.7, 'rgba(28,26,22,0.6)');   // deep bevel
+  bevelGrad.addColorStop(1.0, 'rgba(44,42,38,0.3)');   // slightly lighter at edge
   ctx.globalCompositeOperation = 'multiply';
-  ctx.fillStyle = 'rgba(140,140,150,1)'; ctx.fill(bevelPath);
+  ctx.fillStyle = bevelGrad; ctx.fillRect(0, 0, W, H);
   ctx.globalCompositeOperation = 'source-over';
   ctx.restore();
 
-  // Edge highlights
-  ctx.beginPath();
-  belly.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
-  ctx.strokeStyle = 'rgba(220,220,230,0.25)'; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.strokeStyle = 'rgba(240,240,245,0.15)'; ctx.lineWidth = 0.7; ctx.stroke();
-  ctx.beginPath();
-  spine.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
-  ctx.strokeStyle = 'rgba(180,180,190,0.15)'; ctx.lineWidth = 1; ctx.stroke();
+  // ── 4. Fuller groove (research 2c) ──
+  // Positioned at ~38% from spine to bevel, runs 8%→75% of blade length
+  const fullerPts = [];
+  const fullerWidth = H * 0.022;
+  for (let i = 0; i < numPts; i++) {
+    const t = i / (numPts - 1);
+    if (t < 0.08 || t > 0.75) continue;
+    const sy = spine[i][1];
+    const by = bevelLine[i][1];
+    const fullerY = sy + (by - sy) * 0.38;
+    fullerPts.push([spine[i][0], fullerY]);
+  }
+
+  if (fullerPts.length > 2) {
+    // Layer 1: Dark groove fill
+    ctx.beginPath();
+    fullerPts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y - fullerWidth / 2) : ctx.lineTo(x, y - fullerWidth / 2));
+    for (let i = fullerPts.length - 1; i >= 0; i--) ctx.lineTo(fullerPts[i][0], fullerPts[i][1] + fullerWidth / 2);
+    ctx.closePath();
+
+    const fullerGrad = ctx.createLinearGradient(0, fullerPts[0][1] - fullerWidth / 2, 0, fullerPts[0][1] + fullerWidth / 2);
+    fullerGrad.addColorStop(0, 'rgba(24,22,20,0.7)');
+    fullerGrad.addColorStop(0.5, 'rgba(12,10,8,0.85)');
+    fullerGrad.addColorStop(1, 'rgba(24,22,20,0.7)');
+    ctx.fillStyle = fullerGrad; ctx.fill();
+
+    // Layer 2: Upper lip AO shadow
+    ctx.beginPath();
+    fullerPts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y - fullerWidth / 2) : ctx.lineTo(x, y - fullerWidth / 2));
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1.2; ctx.stroke();
+
+    // Layer 3: Lower lip specular highlight
+    ctx.beginPath();
+    fullerPts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y + fullerWidth / 2) : ctx.lineTo(x, y + fullerWidth / 2));
+    ctx.strokeStyle = 'rgba(200,190,175,0.25)'; ctx.lineWidth = 0.8; ctx.stroke();
+  }
+
+  ctx.restore(); // end blade clip
+
+  // ── 5. Bevel shoulder line ──
   ctx.beginPath();
   bevelLine.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
-  ctx.strokeStyle = 'rgba(200,200,210,0.2)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.strokeStyle = 'rgba(200,200,210,0.15)'; ctx.lineWidth = 0.8;
+  ctx.setLineDash([7, 5]); ctx.stroke(); ctx.setLineDash([]);
+
+  // ── 6. Spine stroke ──
+  ctx.beginPath();
+  spine.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
+  ctx.strokeStyle = 'rgba(154,152,148,0.2)'; ctx.lineWidth = 1.4; ctx.stroke();
+
+  // ── 7. Edge gleam (research 2e) ──
+  // The cutting edge reflects as a bright thin line — the thinner the steel, the brighter.
+  // Applied as the FINAL layer over everything, not clipped.
+  ctx.save();
+  ctx.beginPath();
+  belly.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
+  ctx.strokeStyle = '#f0ece6'; ctx.globalAlpha = 0.35; ctx.lineWidth = 0.7; ctx.stroke();
+  ctx.globalAlpha = 0.18; ctx.lineWidth = 2; ctx.stroke(); // soft glow behind
+  ctx.restore();
 }
 
 // ═══════════════════════════════════════════
@@ -527,7 +587,17 @@ export default function AppV2() {
           { id: 'vector', label: 'VECTOR', sub: 'export svg for blender' },
           { id: 'ha', label: '\u5203', sub: 'blade shapes' },
           { id: 'about', label: 'ABOUT', sub: 'sources \u00B7 research' },
-        ].map(t => (
+          { id: 'anatomy', label: 'ANATOMY', sub: 'blade reference', href: 'blade-anatomy.html' },
+        ].map(t => t.href ? (
+          <a key={t.id} href={t.href} style={{
+            ...tabStyle(false),
+            display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1,
+            padding: '8px 16px', textDecoration: 'none',
+          }}>
+            <span>{t.label}</span>
+            <span style={{ fontSize: 8, color: T.textDim, letterSpacing: '0.02em', textTransform: 'none' }}>{t.sub}</span>
+          </a>
+        ) : (
           <button key={t.id} style={{
             ...tabStyle(section === t.id),
             display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1,
