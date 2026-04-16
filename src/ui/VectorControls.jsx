@@ -6,14 +6,14 @@ const C = {
 };
 
 export const DEFAULT_VECTOR_SETTINGS = {
-  levels: 6,
+  levels: 20,
   detail: 2,
-  smoothing: 3,
-  blur: 3,
-  grain: 50,
-  vignette: 30,
-  colorVariation: 50,
-  minSize: 30,
+  smoothing: 2,
+  blur: 0,
+  grain: 5,
+  vignette: 40,
+  colorVariation: 0,
+  minSize: 0,
 };
 
 export default function VectorControls({ settings, onChange }) {
