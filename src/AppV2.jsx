@@ -8,7 +8,7 @@ import { T, btnStyle, tabStyle, sectionHeader } from './ui/theme.js';
 import UnicodeSlider from './ui/UnicodeSlider.jsx';
 import { DEFAULT_VECTOR_SETTINGS } from './ui/VectorControls.jsx';
 import About from './ui/About.jsx';
-import { BLADE_SHAPES, BLADE_NAMES } from './ui/BladeShapes.js';
+import { BLADE_SHAPES, BLADE_NAMES, generateClipPoint, generateTanto, generateSpearPoint } from './ui/BladeShapes.js';
 
 // ═══════════════════════════════════════════
 // Random recipe generation
@@ -102,6 +102,11 @@ function buildBladePath(spine, belly) {
 // Based on blade-rendering-research.md
 // ═══════════════════════════════════════════
 async function renderBlade(canvas, recipe, textureScale, vecSettings) {
+  const geo = bladeGeometry(canvas.width, canvas.height);
+  return renderBladeWithGeo(canvas, recipe, textureScale, vecSettings, geo, true);
+}
+
+async function renderBladeWithGeo(canvas, recipe, textureScale, vecSettings, geo, showFuller = true) {
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
@@ -111,7 +116,7 @@ async function renderBlade(canvas, recipe, textureScale, vecSettings) {
   const texImg = await rasterizeSVG(recipe, W, H, vecSettings, textureScale);
   if (!texImg) return;
 
-  const { spine, belly, bevelLine } = bladeGeometry(W, H);
+  const { spine, belly, bevelLine } = geo;
   const bladePath = buildBladePath(spine, belly);
   const numPts = spine.length;
 
@@ -158,7 +163,8 @@ async function renderBlade(canvas, recipe, textureScale, vecSettings) {
   ctx.globalCompositeOperation = 'source-over';
   ctx.restore();
 
-  // ── 4. Fuller groove (research 2c) ──
+  // ── 4. Fuller groove (research 2c) — only if enabled for this profile ──
+  if (showFuller) {
   // Positioned at ~38% from spine to bevel, runs 8%→75% of blade length
   // Tapers at both ends for realistic capsule shape
   const fullerPts = [];
@@ -223,6 +229,7 @@ async function renderBlade(canvas, recipe, textureScale, vecSettings) {
     for (let i = 1; i < fullerPts.length; i++) ctx.lineTo(fullerPts[i][0], fullerPts[i][1] + fullerPts[i][2] / 2);
     ctx.strokeStyle = 'rgba(200,190,175,0.22)'; ctx.lineWidth = 0.7; ctx.stroke();
   }
+  } // end showFuller
 
   ctx.restore(); // end blade clip
 
@@ -356,9 +363,15 @@ function HaSection({ recipe, textureScale, vecSettings }) {
       if (cancelled) return;
       const c = canvasRef.current;
 
-      if (shape.type === 'procedural' || shape.type === 'procedural-short' || shape.type === 'procedural-clip') {
-        // Use the existing procedural blade renderer
-        await renderBlade(c, recipe, localScale, vecSettings);
+      if (shape.type.startsWith('procedural')) {
+        // Pick the right geometry generator
+        const geoFn = {
+          'procedural': () => bladeGeometry(c.width, c.height),
+          'procedural-clip': () => generateClipPoint(c.width, c.height),
+          'procedural-tanto': () => generateTanto(c.width, c.height),
+          'procedural-spear': () => generateSpearPoint(c.width, c.height),
+        }[shape.type] || (() => bladeGeometry(c.width, c.height));
+        await renderBladeWithGeo(c, recipe, localScale, vecSettings, geoFn(), shape.fuller !== false);
       } else if (shape.type === 'svg') {
         await renderSvgBlade(c, recipe, localScale, vecSettings, shape);
       }
