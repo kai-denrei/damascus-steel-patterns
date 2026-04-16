@@ -42,7 +42,7 @@ export default function Header({ recipe, onPresetChange, onSeedChange, onRandomS
           DAMASCUS PATTERN SIMULATOR
         </div>
         <div style={{ fontSize: 10, color: C.dim, marginTop: 2, fontFamily: 'monospace' }}>
-          Composable Deformation Stack &middot; Perlin Domain Warp &middot; v1.0.003
+          Composable Deformation Stack &middot; Perlin Domain Warp &middot; v1.0.004
         </div>
       </div>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
