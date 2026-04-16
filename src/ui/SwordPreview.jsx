@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { renderDamascus } from '../engine/render.js';
+import { makeSeamlessTile } from '../engine/seamless.js';
 import Slider from './Slider.jsx';
 
 const C = {
@@ -11,11 +12,9 @@ const C = {
 };
 
 function makeTexture(recipe, size) {
-  const tex = document.createElement('canvas');
-  tex.width = size;
-  tex.height = Math.round(size * 0.4);
-  renderDamascus(tex, { ...recipe, resolution: 1 });
-  return tex;
+  const tileW = size;
+  const tileH = Math.round(size * 0.4);
+  return makeSeamlessTile(recipe, tileW, tileH);
 }
 
 function applyMetallicShading(ctx, W, H, angleRad) {
