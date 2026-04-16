@@ -10,15 +10,14 @@ const C = {
   border: '#221e18',
 };
 
-// Render texture at full blade canvas size — no tiling, no seams.
-// textureScale controls the billet-to-pixel ratio (zoom level).
-function makeFullTexture(recipe, canvasW, canvasH, textureScale) {
+// Render texture at a fixed internal resolution.
+// textureScale controls how large the pattern appears on the blade:
+// higher = bigger features, lower = finer detail.
+// The texture is drawn at (textureScale / 100) × canvas size.
+function makeFullTexture(recipe) {
   const tex = document.createElement('canvas');
-  // Scale factor: textureScale maps how many pixels per "billet unit"
-  // Larger textureScale = larger pattern features = fewer layers visible
-  const scaleFactor = textureScale / 100;
-  tex.width = Math.round(canvasW / scaleFactor);
-  tex.height = Math.round(canvasH / scaleFactor);
+  tex.width = 640;
+  tex.height = 256;
   renderDamascus(tex, { ...recipe, resolution: 1 });
   return tex;
 }
@@ -128,8 +127,9 @@ function renderCloseup(canvas, recipe, textureScale, bladeAngle) {
   ctx.fillStyle = '#0a0a0a';
   ctx.fillRect(0, 0, W, H);
 
-  const tex = makeFullTexture(recipe, W * 2, H * 2, textureScale);
+  const tex = makeFullTexture(recipe);
   const angleRad = bladeAngle * Math.PI / 180;
+  const sc = textureScale / 100;
   const { spine, belly } = generateBladeGeometry(W, H);
 
   const cx = W / 2, cy = H / 2;
@@ -143,7 +143,8 @@ function renderCloseup(canvas, recipe, textureScale, bladeAngle) {
   ctx.translate(cx, cy);
   ctx.rotate(angleRad);
   ctx.translate(-cx, -cy);
-  ctx.drawImage(tex, -W * 0.5, -H * 0.5, W * 2, H * 2);
+  const tw = W * sc * 2, th = H * sc * 2;
+  ctx.drawImage(tex, -tw * 0.25, -th * 0.25, tw, th);
   ctx.restore();
   applyMetallicShading(ctx, W, H, angleRad);
   ctx.restore();
@@ -160,7 +161,8 @@ function renderTip(canvas, recipe, textureScale) {
   ctx.fillStyle = '#0a0a0a';
   ctx.fillRect(0, 0, W, H);
 
-  const tex = makeFullTexture(recipe, W, H, textureScale);
+  const tex = makeFullTexture(recipe);
+  const sc = textureScale / 100;
 
   // Spine on top (flatter), belly curves down, both converge at tip (right)
   const numPts = 80;
@@ -190,7 +192,7 @@ function renderTip(canvas, recipe, textureScale) {
 
   ctx.save();
   ctx.clip(bladePath);
-  ctx.drawImage(tex, 0, 0, W, H);
+  ctx.drawImage(tex, 0, 0, W * sc, H * sc);
   applyMetallicShading(ctx, W, H, 0);
   ctx.restore();
   drawEdgeHighlights(ctx, spine, belly);
@@ -206,7 +208,8 @@ function renderBevel(canvas, recipe, textureScale) {
   ctx.fillStyle = '#0a0a0a';
   ctx.fillRect(0, 0, W, H);
 
-  const tex = makeFullTexture(recipe, W, H, textureScale);
+  const tex = makeFullTexture(recipe);
+  const sc = textureScale / 100;
 
   // Blade runs from top-left (heel/base) to bottom-right (tip)
   // Use the full diagonal for maximum length
@@ -244,7 +247,7 @@ function renderBevel(canvas, recipe, textureScale) {
   // Draw main blade with texture
   ctx.save();
   ctx.clip(bladePath);
-  ctx.drawImage(tex, 0, 0, W, H);
+  ctx.drawImage(tex, 0, 0, W * sc, H * sc);
   applyMetallicShading(ctx, W, H, 0);
 
   // Bevel zone: darken the area between bevel line and cutting edge
@@ -304,7 +307,8 @@ function renderAnatomy(canvas, recipe, textureScale) {
   ctx.fillStyle = '#0a0a0a';
   ctx.fillRect(0, 0, W, H);
 
-  const tex = makeFullTexture(recipe, W, H, textureScale);
+  const tex = makeFullTexture(recipe);
+  const sc = textureScale / 100;
 
   // Full knife: point at LEFT, handle at RIGHT
   // Blade tapers from thick (right/heel) to thin (left/point)
@@ -343,7 +347,7 @@ function renderAnatomy(canvas, recipe, textureScale) {
   // Draw blade with texture
   ctx.save();
   ctx.clip(bladePath);
-  ctx.drawImage(tex, 0, 0, W, H);
+  ctx.drawImage(tex, 0, 0, W * sc, H * sc);
   applyMetallicShading(ctx, W, H, 0);
 
   // Bevel zone
@@ -485,7 +489,7 @@ const VIEWS = [
 
 export default function SwordPreview({ recipe }) {
   const canvasRef = useRef(null);
-  const [view, setView] = useState('closeup');
+  const [view, setView] = useState('bevel');
   const [textureScale, setTextureScale] = useState(120);
   const [bladeAngle, setBladeAngle] = useState(8);
 
