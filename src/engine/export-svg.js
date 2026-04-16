@@ -58,8 +58,12 @@ export function generateSVG(recipe, width = 1920, height = 768, settings = {}) {
   const alloy = ALLOYS[recipe.layers.alloy];
   const rand = seededRand(recipe.seed + 7919);
 
-  const gW = 320 * opts.detail;
-  const gH = 128 * opts.detail;
+  // Grid must resolve the layer structure: ≥ 4 samples per layer cycle.
+  // Also scale with detail slider. Cap at 1600×640 for sanity.
+  const minH = Math.max(128, recipe.layers.count * 4);
+  const baseH = Math.max(minH, 128 * opts.detail);
+  const gH = Math.min(640, baseH);
+  const gW = Math.min(1600, Math.round(gH * 2.5));
 
   // Sample material field
   const matField = new Float32Array(gW * gH);

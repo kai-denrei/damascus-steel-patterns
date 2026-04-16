@@ -46,9 +46,10 @@ export function renderDamascusVector(canvas, recipe) {
   const perm = buildPerm(recipe.seed);
   const alloy = ALLOYS[recipe.layers.alloy];
 
-  // Sample material field
-  const gW = Math.ceil(W * 0.5);
-  const gH = Math.ceil(H * 0.5);
+  // Grid must resolve layer structure: ≥ 4 samples per layer cycle
+  const minH = Math.max(128, recipe.layers.count * 4);
+  const gH = Math.min(640, Math.max(minH, Math.ceil(H * 0.5)));
+  const gW = Math.min(1600, Math.round(gH * 2.5));
   const matField = new Float32Array(gW * gH);
 
   for (let gy = 0; gy < gH; gy++) {

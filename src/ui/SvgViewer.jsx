@@ -20,10 +20,14 @@ export default function SvgViewer({ recipe }) {
   const [settings, setSettings] = useState(DEFAULT_VECTOR_SETTINGS);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
+  const [renderTime, setRenderTime] = useState(null);
+
   const generate = useCallback(() => {
     setGenerating(true);
     setTimeout(() => {
+      const t0 = performance.now();
       const svg = generateSVG(recipe, 1920, 768, settings);
+      setRenderTime(((performance.now() - t0) / 1000).toFixed(1));
       setSvgContent(svg);
       setGenerating(false);
     }, 50);
@@ -100,7 +104,7 @@ export default function SvgViewer({ recipe }) {
         fontFamily: 'monospace',
       }}>
         <div style={{ color: C.dim }}>
-          scroll to zoom &middot; drag to pan &middot; {zoom.toFixed(1)}x &middot; {sizeKB}KB
+          scroll to zoom &middot; drag to pan &middot; {zoom.toFixed(1)}x &middot; {sizeKB}KB{renderTime ? ` \u00B7 ${renderTime}s` : ''}
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button
