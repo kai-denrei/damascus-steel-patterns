@@ -8,6 +8,7 @@ import { T, btnStyle, tabStyle, sectionHeader } from './ui/theme.js';
 import UnicodeSlider from './ui/UnicodeSlider.jsx';
 import { DEFAULT_VECTOR_SETTINGS } from './ui/VectorControls.jsx';
 import About from './ui/About.jsx';
+import { BLADE_SHAPES, BLADE_NAMES } from './ui/BladeShapes.js';
 
 // ═══════════════════════════════════════════
 // Random recipe generation
@@ -176,6 +177,153 @@ function renderMiniBladePixel(canvas, recipe) {
   ctx.save(); ctx.clip(bladePath);
   ctx.drawImage(tex, 0, 0, W, H);
   ctx.restore();
+}
+
+// ═══════════════════════════════════════════
+// 刃 Ha section — experimental blade shapes
+// ═══════════════════════════════════════════
+function renderSvgBlade(canvas, recipe, textureScale, vecSettings, shape) {
+  return new Promise(async (resolve) => {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = T.bgDeep;
+    ctx.fillRect(0, 0, W, H);
+
+    // Generate vector texture
+    const texImg = await rasterizeSVG(recipe, W, H, vecSettings, textureScale);
+    if (!texImg) { resolve(); return; }
+
+    // Parse the SVG blade path
+    const bladePath = new Path2D(shape.bladePath);
+
+    // Compute transform: fit the shape viewBox into the canvas
+    const [, , vbW, vbH] = shape.viewBox.split(' ').map(Number);
+    const scaleX = W / vbW;
+    const scaleY = H / vbH;
+    const scale = Math.min(scaleX, scaleY) * 0.9;
+    const offX = (W - vbW * scale) / 2;
+    const offY = (H - vbH * scale) / 2;
+
+    ctx.save();
+    ctx.translate(offX, offY);
+    ctx.scale(scale, scale);
+
+    // Clip to blade shape
+    ctx.save();
+    ctx.clip(bladePath);
+
+    // Draw texture: reset transform, draw full canvas, re-apply clip
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(texImg, 0, 0, W, H);
+    ctx.restore();
+
+    // Metallic shading inside clip (in viewBox coords)
+    const sg = ctx.createLinearGradient(0, 0, 0, vbH);
+    sg.addColorStop(0, 'rgba(255,255,255,0.1)');
+    sg.addColorStop(0.3, 'rgba(255,255,255,0.04)');
+    sg.addColorStop(0.6, 'rgba(0,0,0,0)');
+    sg.addColorStop(1, 'rgba(0,0,0,0.12)');
+    ctx.fillStyle = sg;
+    ctx.fillRect(0, 0, vbW, vbH);
+
+    ctx.restore(); // end clip
+
+    // Blade outline
+    ctx.strokeStyle = 'rgba(200,200,210,0.2)';
+    ctx.lineWidth = 2 / scale;
+    ctx.stroke(bladePath);
+
+    // Guard if exists
+    if (shape.guardPath) {
+      const guardP = new Path2D(shape.guardPath);
+      ctx.fillStyle = '#2a2520';
+      ctx.fill(guardP);
+      ctx.strokeStyle = 'rgba(180,170,150,0.2)';
+      ctx.lineWidth = 1.5 / scale;
+      ctx.stroke(guardP);
+    }
+
+    ctx.restore(); // end transform
+    resolve();
+  });
+}
+
+function HaSection({ recipe, textureScale, vecSettings }) {
+  const canvasRef = useRef(null);
+  const [bladeKey, setBladeKey] = useState('chef');
+  const [rendering, setRendering] = useState(false);
+  const [localScale, setLocalScale] = useState(textureScale);
+
+  const shape = BLADE_SHAPES[bladeKey];
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    let cancelled = false;
+    setRendering(true);
+
+    const tid = setTimeout(async () => {
+      if (cancelled) return;
+      const c = canvasRef.current;
+
+      if (shape.type === 'procedural' || shape.type === 'procedural-short' || shape.type === 'procedural-clip') {
+        // Use the existing procedural blade renderer
+        await renderBlade(c, recipe, localScale, vecSettings);
+      } else if (shape.type === 'svg') {
+        await renderSvgBlade(c, recipe, localScale, vecSettings, shape);
+      }
+      if (!cancelled) setRendering(false);
+    }, 200);
+    return () => { cancelled = true; clearTimeout(tid); };
+  }, [recipe, localScale, vecSettings, bladeKey]);
+
+  return (
+    <div style={{ padding: '16px 0' }}>
+      {/* Blade selector */}
+      <div style={{
+        display: 'flex', gap: 6, padding: '0 24px 12px',
+        flexWrap: 'wrap', alignItems: 'center',
+      }}>
+        {BLADE_NAMES.map(key => {
+          const s = BLADE_SHAPES[key];
+          const active = bladeKey === key;
+          return (
+            <button key={key} onClick={() => setBladeKey(key)} style={{
+              ...btnStyle(active),
+              padding: '5px 12px',
+              display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1,
+            }}>
+              <span style={{ fontSize: 10 }}>{s.name}</span>
+              <span style={{ fontSize: 8, opacity: 0.6, textTransform: 'none', letterSpacing: 0 }}>{s.desc}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Canvas */}
+      <div style={{ position: 'relative', background: T.bgDeep }}>
+        <canvas ref={canvasRef} width={1280} height={480}
+          style={{ width: '100%', display: 'block' }} />
+        <div style={{
+          background: 'radial-gradient(ellipse at center, transparent 35%, rgba(8,6,4,0.45) 70%, rgba(4,3,2,0.75) 100%)',
+          pointerEvents: 'none', position: 'absolute', inset: 0,
+        }} />
+        {rendering && (
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(13,11,9,0.6)', fontSize: 11, color: T.emberLow, letterSpacing: '0.2em',
+          }}>FORGING\u2026</div>
+        )}
+      </div>
+
+      {/* Scale slider */}
+      <div style={{ padding: '12px 24px', maxWidth: 300 }}>
+        <UnicodeSlider label="texture scale" value={localScale} onChange={setLocalScale}
+          min={30} max={300} step={5} tooltip="Pattern zoom on the blade." />
+      </div>
+    </div>
+  );
 }
 
 // ═══════════════════════════════════════════
@@ -377,6 +525,7 @@ export default function AppV2() {
           { id: 'blade', label: 'BLADE', sub: 'preview \u00B7 export png' },
           { id: 'explore', label: 'EXPLORE', sub: 'roll 9 patterns' },
           { id: 'vector', label: 'VECTOR', sub: 'export svg for blender' },
+          { id: 'ha', label: '\u5203', sub: 'blade shapes' },
           { id: 'about', label: 'ABOUT', sub: 'sources \u00B7 research' },
         ].map(t => (
           <button key={t.id} style={{
@@ -501,6 +650,11 @@ export default function AppV2() {
           <VectorSection recipe={recipe} textureScale={textureScale}
             vecSettings={vecSettings} setVecSettings={setVecSettings}
             onSaveSVG={handleSaveSVG} />
+        )}
+
+        {/* ─── 刃 ─── */}
+        {section === 'ha' && (
+          <HaSection recipe={recipe} textureScale={textureScale} vecSettings={vecSettings} />
         )}
 
         {/* ─── ABOUT ─── */}
