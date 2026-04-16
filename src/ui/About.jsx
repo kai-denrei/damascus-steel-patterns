@@ -1,22 +1,17 @@
-const C = {
-  amber: '#c8a040',
-  text: '#d8d4cc',
-  muted: '#706860',
-  dim: '#443c34',
-  border: '#221e18',
-};
+import { T } from './theme.js';
 
 const linkStyle = {
-  color: C.amber,
+  color: T.emberLow,
   textDecoration: 'none',
-  borderBottom: `1px solid ${C.dim}`,
+  borderBottom: `1px solid ${T.textDim}`,
 };
 
 const sectionStyle = {
   fontSize: 10,
-  color: C.dim,
-  letterSpacing: '0.15em',
-  borderBottom: `1px solid ${C.border}`,
+  color: T.textDim,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+  borderBottom: `1px solid ${T.border}`,
   paddingBottom: 4,
   fontFamily: 'monospace',
   marginTop: 16,
@@ -38,11 +33,11 @@ function Ref({ title, authors, journal, year, url, note }) {
       {url ? (
         <a href={url} target="_blank" rel="noopener noreferrer" style={linkStyle}>{title}</a>
       ) : (
-        <span style={{ color: C.text }}>{title}</span>
+        <span style={{ color: T.textPrim }}>{title}</span>
       )}
-      {authors && <div style={{ color: C.muted, fontSize: 10 }}>{authors}</div>}
-      {journal && <div style={{ color: C.dim, fontSize: 10 }}>{journal}{year ? `, ${year}` : ''}</div>}
-      {note && <div style={{ color: C.dim, fontSize: 9, fontStyle: 'italic' }}>{note}</div>}
+      {authors && <div style={{ color: T.textDim, fontSize: 10 }}>{authors}</div>}
+      {journal && <div style={{ color: T.textDim, fontSize: 10 }}>{journal}{year ? `, ${year}` : ''}</div>}
+      {note && <div style={{ color: T.textDim, fontSize: 9, fontStyle: 'italic' }}>{note}</div>}
     </div>
   );
 }
@@ -51,15 +46,15 @@ export default function About() {
   return (
     <div style={{
       fontFamily: 'monospace',
-      color: C.text,
+      color: T.textPrim,
       maxWidth: 700,
       lineHeight: 1.7,
       fontSize: 11,
     }}>
-      <div style={{ fontSize: 13, color: C.amber, letterSpacing: '0.15em', marginBottom: 4 }}>
+      <div style={{ fontSize: 13, color: T.emberLow, letterSpacing: '0.15em', marginBottom: 4 }}>
         ABOUT THIS SIMULATOR
       </div>
-      <p style={{ color: C.muted, fontSize: 10, marginBottom: 16 }}>
+      <p style={{ color: T.textDim, fontSize: 10, marginBottom: 16 }}>
         A browser-based damascus steel pattern simulator with composable deformation stack engine,
         recipe-based reproducibility, vector SVG export, and blade texture preview.
         Built with Perlin noise domain warping, marching squares contour extraction, and

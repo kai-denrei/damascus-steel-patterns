@@ -7,6 +7,7 @@ import { ALLOY_NAMES } from './engine/alloys.js';
 import { T, btnStyle, tabStyle, sectionHeader } from './ui/theme.js';
 import UnicodeSlider from './ui/UnicodeSlider.jsx';
 import { DEFAULT_VECTOR_SETTINGS } from './ui/VectorControls.jsx';
+import About from './ui/About.jsx';
 
 // ═══════════════════════════════════════════
 // Random recipe generation
@@ -175,6 +176,75 @@ function renderMiniBladePixel(canvas, recipe) {
   ctx.save(); ctx.clip(bladePath);
   ctx.drawImage(tex, 0, 0, W, H);
   ctx.restore();
+}
+
+// ═══════════════════════════════════════════
+// VECTOR section with SVG preview + settings
+// ═══════════════════════════════════════════
+function VectorSection({ recipe, textureScale, vecSettings, setVecSettings, onSaveSVG }) {
+  const [svgContent, setSvgContent] = useState('');
+  const [genTime, setGenTime] = useState(null);
+
+  useEffect(() => {
+    const tid = setTimeout(() => {
+      const t0 = performance.now();
+      const svg = generateSVG({ ...recipe, patternScale: textureScale / 100 }, 1920, 768, vecSettings);
+      setGenTime(((performance.now() - t0) / 1000).toFixed(1));
+      setSvgContent(svg);
+    }, 200);
+    return () => clearTimeout(tid);
+  }, [recipe, textureScale, vecSettings]);
+
+  const svgUrl = svgContent ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgContent)}` : '';
+  const sizeKB = svgContent ? (new Blob([svgContent]).size / 1024).toFixed(0) : 0;
+
+  const deformStr = recipe.deformations.length === 0 ? 'wild' : recipe.deformations.map(d => d.type).join(' + ');
+
+  return (
+    <div style={{ padding: '16px 24px' }}>
+      <div style={{ ...sectionHeader, marginTop: 0 }}>SVG VECTOR PREVIEW</div>
+
+      {/* Preview */}
+      <div style={{ border: `1px solid ${T.border}`, background: '#050505', marginBottom: 8 }}>
+        {svgUrl && <img src={svgUrl} alt="SVG preview" style={{ width: '100%', display: 'block' }} />}
+      </div>
+
+      {/* Info strip */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, fontSize: 10, fontFamily: 'monospace' }}>
+        <div style={{ color: T.textDim }}>
+          {deformStr} &middot; {recipe.layers.alloy} &middot; s{recipe.seed}
+          &middot; {sizeKB}KB{genTime ? ` \u00B7 ${genTime}s` : ''}
+        </div>
+        <button style={btnStyle(true)} onClick={onSaveSVG}>SVG &darr; EXPORT</button>
+      </div>
+
+      {/* Blender note */}
+      <div style={{ fontSize: 10, color: T.textDim, lineHeight: 1.6, marginBottom: 16, maxWidth: 600 }}>
+        <strong style={{ color: T.textPrim }}>For Blender:</strong> Import the SVG directly.
+        Recipe metadata is embedded in {'<desc>'} for reproducibility.
+        Use alongside diffuse/normal/roughness texture maps for PBR materials.
+      </div>
+
+      {/* Settings */}
+      <div style={sectionHeader}>VECTOR SETTINGS</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px 20px', maxWidth: 800 }}>
+        {[
+          { key: 'levels', min: 2, max: 20, step: 1, tip: 'Color gradient bands.' },
+          { key: 'detail', min: 1, max: 5, step: 1, tip: 'Grid density for contours.' },
+          { key: 'smoothing', min: 1, max: 6, step: 1, tip: 'Curve smoothing radius.' },
+          { key: 'grain', min: 0, max: 100, step: 5, fmt: v => `${v}%`, tip: 'SVG grain texture.' },
+          { key: 'vignette', min: 0, max: 80, step: 5, fmt: v => `${v}%`, tip: 'Edge darkening.' },
+          { key: 'colorVariation', label: 'variation', min: 0, max: 100, step: 5, fmt: v => `${v}%`, tip: 'Color randomness.' },
+          { key: 'minSize', label: 'min size', min: 0, max: 200, step: 5, tip: 'Remove small fragments.' },
+          { key: 'blur', min: 0, max: 8, step: 0.5, tip: 'Blur band transitions.' },
+        ].map(s => (
+          <UnicodeSlider key={s.key} label={s.label || s.key} value={vecSettings[s.key]}
+            onChange={v => setVecSettings(prev => ({ ...prev, [s.key]: v }))}
+            min={s.min} max={s.max} step={s.step} fmt={s.fmt} tooltip={s.tip} />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // ═══════════════════════════════════════════
@@ -425,46 +495,19 @@ export default function AppV2() {
 
         {/* ─── VECTOR ─── */}
         {section === 'vector' && (
-          <div style={{ padding: '24px' }}>
-            <div style={{ fontSize: 11, color: T.textDim, lineHeight: 1.7, maxWidth: 600 }}>
-              <div style={{ ...sectionHeader, marginTop: 0 }}>SVG VECTOR EXPORT</div>
-              <p>Export the current pattern as a resolution-independent SVG with smooth
-              Bezier contour curves. The SVG includes multi-threshold color bands,
-              optional grain texture, and recipe metadata in the {'<desc>'} element.</p>
-              <p style={{ marginTop: 8 }}>
-                <strong style={{ color: T.textPrim }}>For Blender:</strong> The SVG can be imported directly.
-                Use the recipe metadata to regenerate matching diffuse, normal, and roughness
-                texture maps at any resolution for PBR materials.
-              </p>
-              <p style={{ marginTop: 8 }}>
-                Adjust vector settings on the BLADE tab before exporting.
-                SVG &darr; in the header exports with the current settings.
-              </p>
-              <button style={{ ...btnStyle(true), marginTop: 16 }} onClick={handleSaveSVG}>
-                SVG &darr; EXPORT
-              </button>
-            </div>
-          </div>
+          <VectorSection recipe={recipe} textureScale={textureScale}
+            vecSettings={vecSettings} setVecSettings={setVecSettings}
+            onSaveSVG={handleSaveSVG} />
         )}
 
         {/* ─── ABOUT ─── */}
         {section === 'about' && (
           <div style={{ padding: '24px' }}>
-            <div style={{ fontSize: 11, color: T.textDim, lineHeight: 1.7, maxWidth: 600 }}>
-              <p>Damascus steel pattern simulator. Composable deformation stack engine with
-              Perlin noise domain warping, marching squares contour extraction, and
-              cubic Bezier curve fitting.</p>
-              <p style={{ marginTop: 8 }}>
-                <a href="https://github.com/kai-denrei/damascus-steel-patterns" target="_blank"
-                  rel="noopener" style={{ color: T.emberLow, borderBottom: `1px solid ${T.border}`, textDecoration: 'none' }}>
-                  Source, research &amp; references on GitHub
-                </a>
-              </p>
-              <p style={{ marginTop: 4 }}>
-                <a href="index.html" style={{ color: T.textDim, borderBottom: `1px solid ${T.border}`, textDecoration: 'none', fontSize: 10 }}>
-                  Classic editor (v1) with full pattern controls
-                </a>
-              </p>
+            <About />
+            <div style={{ marginTop: 16 }}>
+              <a href="v1.html" style={{ color: T.textDim, borderBottom: `1px solid ${T.border}`, textDecoration: 'none', fontSize: 10, fontFamily: 'monospace' }}>
+                Classic editor (v1) with full pattern controls
+              </a>
             </div>
           </div>
         )}
