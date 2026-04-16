@@ -508,8 +508,9 @@ export default function AppV2() {
   const [textureScale, setTextureScale] = useState(120);
   const [vecSettings, setVecSettings] = useState(DEFAULT_VECTOR_SETTINGS);
   const [section, setSection] = useState('blade');
-  const [rendering, setRendering] = useState(false);
+  const [renderQuality, setRenderQuality] = useState('vector'); // 'pixel' | 'rendering' | 'vector'
   const canvasRef = useRef(null);
+  const vectorTimerRef = useRef(null);
 
   // Explore state
   const [exploreRecipes, setExploreRecipes] = useState([]);
@@ -523,17 +524,48 @@ export default function AppV2() {
     return () => clearTimeout(tid);
   }, [recipe]);
 
-  // Render blade
+  // Two-pass blade rendering:
+  // Pass 1: instant pixel preview (~80ms) — immediate feedback
+  // Pass 2: vector upgrade (~2-8s) — runs 1.2s after last change
   useEffect(() => {
     if (!canvasRef.current || section !== 'blade') return;
+
+    // ── Pass 1: instant pixel render ──
+    const c = canvasRef.current;
+    const W = c.width, H = c.height;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = T.bgDeep; ctx.fillRect(0, 0, W, H);
+    const tex = document.createElement('canvas');
+    tex.width = W; tex.height = H;
+    renderDamascus(tex, { ...recipe, resolution: 1, patternScale: textureScale / 100 });
+    const { spine, belly } = bladeGeometry(W, H);
+    const bp = buildBladePath(spine, belly);
+    ctx.save(); ctx.clip(bp);
+    ctx.drawImage(tex, 0, 0, W, H);
+    const mi = Math.floor(spine.length * 0.4);
+    const qg = ctx.createLinearGradient(0, spine[mi][1], 0, belly[mi][1]);
+    qg.addColorStop(0, 'rgba(58,56,54,0.35)');
+    qg.addColorStop(0.35, 'rgba(212,208,202,0.08)');
+    qg.addColorStop(0.72, 'rgba(42,40,36,0.3)');
+    qg.addColorStop(1, 'rgba(20,18,16,0.35)');
+    ctx.fillStyle = qg; ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    ctx.save(); ctx.beginPath();
+    belly.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
+    ctx.strokeStyle = '#f0ece6'; ctx.globalAlpha = 0.3; ctx.lineWidth = 0.7;
+    ctx.stroke(); ctx.restore();
+    setRenderQuality('pixel');
+
+    // ── Pass 2: vector upgrade after 1.2s idle ──
+    if (vectorTimerRef.current) clearTimeout(vectorTimerRef.current);
     let cancelled = false;
-    setRendering(true);
-    const tid = setTimeout(async () => {
+    vectorTimerRef.current = setTimeout(async () => {
       if (cancelled) return;
+      setRenderQuality('rendering');
       await renderBlade(canvasRef.current, recipe, textureScale, vecSettings);
-      if (!cancelled) setRendering(false);
-    }, 200);
-    return () => { cancelled = true; clearTimeout(tid); };
+      if (!cancelled) setRenderQuality('vector');
+    }, 1200);
+    return () => { cancelled = true; clearTimeout(vectorTimerRef.current); };
   }, [recipe, textureScale, vecSettings, section]);
 
   // Render explore thumbnails
@@ -595,7 +627,7 @@ export default function AppV2() {
         maxWidth: 1100, width: '100%', margin: '0 auto', flexWrap: 'wrap', gap: 6,
       }}>
         <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-          DAMASCUS FORGE <span style={{ fontSize: 8, fontWeight: 400, color: T.textDim, letterSpacing: '0.05em' }}>v2.1</span>
+          DAMASCUS FORGE <span style={{ fontSize: 8, fontWeight: 400, color: T.textDim, letterSpacing: '0.05em' }}>v2.2</span>
         </div>
         <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Forge Anew button */}
@@ -665,11 +697,18 @@ export default function AppV2() {
                 background: 'radial-gradient(ellipse at center, transparent 35%, rgba(8,6,4,0.45) 70%, rgba(4,3,2,0.75) 100%)',
                 pointerEvents: 'none', position: 'absolute', inset: 0,
               }} />
-              {rendering && (
+              {renderQuality === 'rendering' && (
                 <div style={{
                   position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'rgba(13,11,9,0.6)', fontSize: 11, color: T.emberLow, letterSpacing: '0.2em',
-                }}>FORGING\u2026</div>
+                  background: 'rgba(13,11,9,0.35)', fontSize: 10, color: T.emberLow, letterSpacing: '0.15em',
+                }}>refining\u2026</div>
+              )}
+              {renderQuality === 'pixel' && (
+                <div style={{
+                  position: 'absolute', bottom: 6, right: 10,
+                  fontSize: 8, color: T.textDim, fontFamily: 'monospace', letterSpacing: '0.05em',
+                  pointerEvents: 'none', opacity: 0.6,
+                }}>preview \u00B7 refining in a moment</div>
               )}
             </div>
 
