@@ -266,7 +266,28 @@ function polylineLength(points) {
   return len;
 }
 
-export function extractContours(field, rows, cols, threshold, outW, outH, smoothRadius = 4, minLength = 0) {
+// Shoelace formula for polygon area (signed)
+function polyArea(points) {
+  let area = 0;
+  const n = points.length;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    area += points[i][0] * points[j][1];
+    area -= points[j][0] * points[i][1];
+  }
+  return Math.abs(area) * 0.5;
+}
+
+// Compactness = 4π × area / perimeter² — circle = 1.0, thin sliver → 0
+// Artifacts are razor-thin: very low compactness
+function polyCompactness(points) {
+  const area = polyArea(points);
+  const perim = polylineLength(points);
+  if (perim < 1) return 0;
+  return (4 * Math.PI * area) / (perim * perim);
+}
+
+export function extractContours(field, rows, cols, threshold, outW, outH, smoothRadius = 4, minLength = 0, minCompactness = 0) {
   const { padded, padW, padH } = padField(field, rows, cols);
   const segments = marchingSquares(padded, padH, padW, threshold);
   const polylines = chainSegments(segments, 0.01);
@@ -288,5 +309,13 @@ export function extractContours(field, rows, cols, threshold, outW, outH, smooth
       return subsample(smoothed, 3);
     })
     .filter(pl => pl.length >= 3)
-    .filter(pl => minLength <= 0 || polylineLength(pl) >= minLength);
+    .filter(pl => minLength <= 0 || polylineLength(pl) >= minLength)
+    .filter(pl => {
+      if (minCompactness <= 0) return true;
+      // Only filter closed contours (open ones span the boundary — always keep)
+      const closed = Math.abs(pl[0][0] - pl[pl.length - 1][0]) < 5 &&
+                     Math.abs(pl[0][1] - pl[pl.length - 1][1]) < 5;
+      if (!closed) return true;
+      return polyCompactness(pl) >= minCompactness;
+    });
 }

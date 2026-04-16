@@ -108,6 +108,18 @@ export default function SvgViewer({ recipe }) {
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button
+            onClick={() => setSettings(s => ({ ...s, fixAnomalies: !s.fixAnomalies }))}
+            style={{
+              padding: '3px 8px', fontSize: 10, fontFamily: 'monospace',
+              background: 'transparent',
+              border: `1px solid ${settings.fixAnomalies ? C.amber : C.dim}`,
+              color: settings.fixAnomalies ? C.amber : C.dim,
+              cursor: 'pointer',
+            }}
+          >
+            FIX
+          </button>
+          <button
             onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
             style={{
               padding: '3px 8px', fontSize: 10, fontFamily: 'monospace',

@@ -91,7 +91,8 @@ export function generateSVG(recipe, width = 1920, height = 768, settings = {}) {
     // Thresholds widely spaced: e.g. for 6 levels → 0.083, 0.25, 0.417, 0.583, 0.75, 0.917
     const threshold = (li + 0.5) / NUM;
 
-    const contours = extractContours(matField, gH, gW, threshold, width, height, opts.smoothing, opts.minSize);
+    const compactness = opts.fixAnomalies ? 0.01 : 0;
+    const contours = extractContours(matField, gH, gW, threshold, width, height, opts.smoothing, opts.minSize, compactness);
     if (contours.length === 0) continue;
 
     // Color for this level
