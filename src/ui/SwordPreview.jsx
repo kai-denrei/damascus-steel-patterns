@@ -211,7 +211,7 @@ function renderBevel(canvas, recipe, textureScale) {
   const spine = [], belly = [], bevelLine = [];
   for (let i = 0; i <= numPts; i++) {
     const t = i / numPts; // 0 = heel (top-left), 1 = tip (bottom-right)
-    const x = -W * 0.08 + t * W * 1.12;
+    const x = -W * 0.15 + t * W * 1.05;
 
     // Blade width: wide at heel, narrows to a point at tip
     const bladeWidth = H * 0.48 * (1 - t * t * 0.97);
