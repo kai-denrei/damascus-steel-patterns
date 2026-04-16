@@ -344,13 +344,8 @@ export default function AppV2() {
         alignItems: 'center', borderBottom: `1px solid ${T.border}`,
         maxWidth: 1100, width: '100%', margin: '0 auto',
       }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-            DAMASCUS FORGE
-          </div>
-          <div style={{ fontSize: 9, color: T.textDim, letterSpacing: '0.05em', marginTop: 1 }}>
-            {deformStr} &middot; {recipe.layers.alloy} &middot; s{recipe.seed}
-          </div>
+        <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+          DAMASCUS FORGE
         </div>
         <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
           {/* Forge Anew button */}
@@ -414,6 +409,14 @@ export default function AppV2() {
                   background: 'rgba(13,11,9,0.6)', fontSize: 11, color: T.emberLow, letterSpacing: '0.2em',
                 }}>FORGING\u2026</div>
               )}
+            </div>
+
+            {/* Pattern info line */}
+            <div style={{
+              padding: '6px 24px', fontSize: 9, color: T.textDim, fontFamily: 'monospace',
+              letterSpacing: '0.05em', borderBottom: `1px solid ${T.border}`,
+            }}>
+              {deformStr} &middot; {recipe.layers.alloy} &middot; {recipe.layers.count} layers &middot; seed {recipe.seed}
             </div>
 
             <div style={{ padding: '12px 24px', display: 'flex', gap: 20, borderBottom: `1px solid ${T.border}` }}>
