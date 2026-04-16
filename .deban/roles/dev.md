@@ -29,6 +29,8 @@ Engine implementation, deformation primitives, rendering pipeline, recipe system
 | 2026-04-16 | SVG levels auto-reduce for high layer counts: `maxLevels = 300/layerCount` | Prevents 45MB SVGs from 20 levels × 96 layers. 8-layer patterns get full 20 levels; 96-layer patterns get 3. | |
 | 2026-04-16 | `patternScale` viewport parameter in render.js | `bx = (px/W) * patternScale` lets the renderer show more or less of the billet. Eliminates texture stretching/pixelation and removes need for tiling on blades. Noise field is continuous beyond [0,1]. | [[arch]], [[ux]] |
 | 2026-04-16 | Compactness filter for contour artifacts: `4π·area/perimeter²` | FIX button removes closed contours with compactness < 0.01 (thin slivers, false triangles). Open contours (boundary-spanning) always kept. | |
+| 2026-04-16 | Anisotropic metallic gradient + edge gleam + fuller groove | Research-informed rendering: gradient spine→belly mimics polished steel reflection. Fuller as AO groove (3 layers). Edge gleam as final overlay stroke separate from texture. | [[ux]] |
+| 2026-04-16 | 5 procedural blade profiles (chef/clip/tanto/spear + existing) | Bézier control point profiles from blade-rendering-research.md. Each specifies fuller visibility. renderBladeWithGeo() accepts any geometry generator. | [[ux]] |
 
 ## Dead Ends
 <!-- APPEND ONLY. Never delete. -->
@@ -45,6 +47,7 @@ Engine implementation, deformation primitives, rendering pipeline, recipe system
 | 2026-04-16 | Isoband (ternary marching squares) implementation for non-overlapping band polygons | 81-case ternary lookup with angle-sorted cell polygon construction. Produced worse artifacts than stacked isolines — cell-local polygon assembly via angle sorting was incorrect for many of the 81 cases. Reverted to proven isoline pipeline with widely-spaced thresholds. |
 | 2026-04-16 | Cross-fade seamless tiling (2× render + cosine-weighted bilinear blend) | Math was correct but vignette and position-dependent shading effects broke the periodicity. Shifted samples had different vignette intensities, creating visible brightness banding. |
 | 2026-04-16 | Texture scaling by varying canvas size then stretching with drawImage | `renderDamascus` maps bx to [0,1] regardless of canvas size. Changing resolution only changed pixel density, not pattern scale. Stretching back to canvas size just introduced pixelation without changing what portion of the pattern was visible. |
+| 2026-04-16 | DTRave Katana SVG import — paths don't render correctly as blade shape | The SVG paths use relative coordinates starting from non-origin positions (m406.61 97.771). When used with Path2D and viewBox transform, the blade doesn't appear correctly — likely coordinate space / transform mismatch. Needs manual path extraction or Inkscape re-tracing. |
 
 ## Lessons
 - Marching squares inherently produces grid-aligned staircases. The fix is coordinate-space smoothing (box filter / Gaussian) on the polyline BEFORE curve fitting — not more points, not smarter simplification. — from dead ends on 2026-04-15
@@ -58,6 +61,7 @@ Engine implementation, deformation primitives, rendering pipeline, recipe system
 ## Open Questions
 - [ ] Raindrop spatial hashing — is it needed at N=30, or does brute-force Gaussian sum stay under 200ms? — owner: Gerald — since: 2026-04-14
 - [ ] Recipe URL length with large deformation stacks — base64 could exceed browser URL limits — owner: Gerald — since: 2026-04-14
+- [ ] DTRave Katana SVG paths need re-tracing — relative coords from non-origin don't work with Path2D viewBox transform — owner: Gerald — since: 2026-04-16
 
 ## Assumptions
 - Seeded LCG (same constants as buildPerm) produces sufficiently uniform raindrop distributions — status: untested — since: 2026-04-14
@@ -69,6 +73,6 @@ Feeds into: [[arch]], [[ux]]
 
 ## Session Log
 <!-- One line per session, newest first -->
-2026-04-16 — Blade texture session: SVG filter chain fix (static noise bug), saddle point asymptotic decider, Nyquist grid auto-scaling, isoband attempt (failed, reverted), seamless tiling attempt (failed, replaced with patternScale viewport), blade views (closeup/tip/bevel/anatomy), SAVE PNG with metadata. v1.0.001→v1.0.018. 4 dead ends, 5 lessons.
+2026-04-16 — Blade rendering research session: anisotropic gradient, fuller as AO groove, edge gleam, 5 procedural blade profiles, DTRave katana import (failed — open question), blade anatomy standalone page, forge-room skin, v2 as default. v1.0.001→v1.0.020+. Katana SVG needs re-tracing.
 2026-04-15 — Vector rendering session: 7 dead ends en route to smooth SVG contours. Final pipeline: marching squares → box-filter smooth → subsample → Catmull-Rom Bezier. Padded field trick forces all contours closed. SVG export + VECTOR viewer tab + EXPLORE tab added. 8x resolution + SSAA toggle. Eng-review identified 3 blockers (SVG fill, file size, VEC tonal balance) — all fixed.
 2026-04-14 — Built full v1: engine (noise, deformations, sample, shade, render), recipe system (schema, presets, URL hash, gallery), UI (all components), 34 tests passing. Added resolution selector, braille loader, BLADES tab with 6 sword shapes.
