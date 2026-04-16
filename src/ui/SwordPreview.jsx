@@ -1,5 +1,6 @@
-import { useRef, useEffect, useState, useMemo } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { renderDamascus } from '../engine/render.js';
+import { BASE_WIDTH, BASE_HEIGHT } from '../recipe/schema.js';
 import Slider from './Slider.jsx';
 
 const C = {
@@ -10,14 +11,13 @@ const C = {
   border: '#221e18',
 };
 
-// All swords defined vertically (tip up). We rotate -90° in the SVG to lay horizontal.
 const SWORDS = [
   {
     name: 'Longsword',
     vb: '0 0 100 100',
     outline: 'M 50 95 L 50 80 M 35 80 L 65 80 M 45 80 L 50 10 L 55 80 Z',
     blade: 'M 45 80 L 50 10 L 55 80 Z',
-    desc: 'Straight, crossguard, balanced',
+    desc: 'Straight, crossguard',
   },
   {
     name: 'Scimitar',
@@ -31,170 +31,205 @@ const SWORDS = [
     vb: '0 0 100 100',
     outline: 'M 50 95 L 50 75 M 30 65 L 50 75 L 70 65 M 40 75 L 42 10 L 58 10 L 60 75 Z',
     blade: 'M 40 75 L 42 10 L 58 10 L 60 75 Z',
-    desc: 'Heavy, V-guard, claymore',
+    desc: 'Heavy, V-guard',
   },
   {
     name: 'Katana',
     vb: '0 0 100 100',
     outline: 'M 52 95 L 52 78 M 44 78 L 60 78 M 50 78 Q 58 50 46 8 Q 62 48 54 78 Z',
     blade: 'M 50 78 Q 58 50 46 8 Q 62 48 54 78 Z',
-    desc: 'Single-edge curve, Japanese',
+    desc: 'Single-edge, Japanese',
   },
   {
     name: 'Gladius',
     vb: '0 0 100 100',
     outline: 'M 50 95 L 50 80 M 40 80 L 60 80 M 43 80 L 42 25 L 50 10 L 58 25 L 57 80 Z',
     blade: 'M 43 80 L 42 25 L 50 10 L 58 25 L 57 80 Z',
-    desc: 'Short, leaf-shaped, Roman',
+    desc: 'Leaf-shaped, Roman',
   },
   {
-    name: 'Dagger',
+    name: 'Chef Knife',
     vb: '0 0 100 100',
-    outline: 'M 50 95 L 50 72 M 38 72 L 62 72 M 44 72 L 50 15 L 56 72 Z',
-    blade: 'M 44 72 L 50 15 L 56 72 Z',
-    desc: 'Double-edge, compact',
+    outline: 'M 65 90 L 65 75 M 55 75 L 75 75 M 60 75 Q 55 50 50 35 Q 45 20 35 10 Q 70 25 72 50 Q 74 65 68 75 Z',
+    blade: 'M 60 75 Q 55 50 50 35 Q 45 20 35 10 Q 70 25 72 50 Q 74 65 68 75 Z',
+    desc: 'Curved belly, like the reference',
   },
 ];
 
-// Render damascus texture to a hidden canvas, return dataURL
-function useTextureDataURL(recipe, size) {
-  const canvasRef = useRef(document.createElement('canvas'));
-  const [dataURL, setDataURL] = useState('');
+// Render the blade with damascus texture + metallic shading
+function renderBlade(canvas, recipe, sword, textureScale) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    canvas.width = size;
-    canvas.height = Math.round(size * 0.4); // 2.5:1 aspect like the main canvas
-    renderDamascus(canvas, { ...recipe, resolution: 1 });
-    setDataURL(canvas.toDataURL());
-  }, [recipe, size]);
+  // Render damascus texture to offscreen canvas at appropriate size
+  const texW = Math.round(W * textureScale / 100);
+  const texH = Math.round(H * textureScale / 100);
+  const texCanvas = document.createElement('canvas');
+  texCanvas.width = Math.max(64, texW);
+  texCanvas.height = Math.max(32, texH);
+  renderDamascus(texCanvas, { ...recipe, resolution: 1 });
 
-  return dataURL;
+  // Transform: rotate blade horizontal (tip right), scale to fill canvas
+  const margin = 0.06;
+  const scaleX = W * (1 - margin * 2) / 100;
+  const scaleY = H * (1 - margin * 2) / 100;
+  const scale = Math.min(scaleX, scaleY);
+
+  ctx.save();
+  ctx.translate(W / 2, H / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.scale(scale, scale);
+  ctx.translate(-50, -50);
+
+  // Clip to blade shape
+  const bladePath = new Path2D(sword.blade);
+  ctx.save();
+  ctx.clip(bladePath);
+
+  // Draw tiled damascus texture within blade clip
+  // Reset transform for texture drawing, then tile
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const pat = ctx.createPattern(texCanvas, 'repeat');
+  ctx.fillStyle = pat;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+
+  // Metallic shading overlays (still inside blade clip)
+
+  // Edge darkening — darken toward blade edges
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const edgeGrad = ctx.createRadialGradient(W * 0.5, H * 0.5, Math.min(W, H) * 0.15, W * 0.5, H * 0.5, Math.max(W, H) * 0.55);
+  edgeGrad.addColorStop(0, 'rgba(0,0,0,0)');
+  edgeGrad.addColorStop(0.7, 'rgba(0,0,0,0.05)');
+  edgeGrad.addColorStop(1, 'rgba(0,0,0,0.25)');
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.fillStyle = edgeGrad;
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.restore();
+
+  // Specular highlight — broad sweep along blade length
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const specGrad = ctx.createLinearGradient(0, H * 0.3, 0, H * 0.5);
+  specGrad.addColorStop(0, 'rgba(255,255,255,0)');
+  specGrad.addColorStop(0.4, 'rgba(255,255,255,0.08)');
+  specGrad.addColorStop(0.5, 'rgba(255,255,255,0.14)');
+  specGrad.addColorStop(0.6, 'rgba(255,255,255,0.08)');
+  specGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.globalCompositeOperation = 'screen';
+  ctx.fillStyle = specGrad;
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.restore();
+
+  // Subtle horizontal specular (light source from upper-left)
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const hSpecGrad = ctx.createLinearGradient(W * 0.1, 0, W * 0.6, 0);
+  hSpecGrad.addColorStop(0, 'rgba(255,255,255,0)');
+  hSpecGrad.addColorStop(0.3, 'rgba(255,255,255,0.04)');
+  hSpecGrad.addColorStop(0.5, 'rgba(255,255,255,0.07)');
+  hSpecGrad.addColorStop(0.7, 'rgba(255,255,255,0.03)');
+  hSpecGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.globalCompositeOperation = 'screen';
+  ctx.fillStyle = hSpecGrad;
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.restore();
+
+  ctx.restore(); // end blade clip
+
+  // Blade edge highlight (thin bright line along cutting edge)
+  ctx.globalCompositeOperation = 'screen';
+  ctx.strokeStyle = 'rgba(200,200,210,0.2)';
+  ctx.lineWidth = 0.6;
+  ctx.stroke(bladePath);
+  ctx.globalCompositeOperation = 'source-over';
+
+  // Full sword outline (handle, guard, blade)
+  const outlinePath = new Path2D(sword.outline);
+  ctx.strokeStyle = C.muted;
+  ctx.lineWidth = 0.6;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.stroke(outlinePath);
+
+  ctx.restore(); // end main transform
 }
 
-function HorizontalBlade({ sword, textureURL, textureScale, selected, onSelect, large }) {
-  // Rotate the vertical sword -90° to lay horizontal (tip points right)
-  // Original viewBox is 100x100. After -90° rotation around center (50,50),
-  // we use a horizontal viewBox to frame it.
-  const patternId = `pat-${sword.name.replace(/\s/g, '')}-${large ? 'lg' : 'sm'}`;
-
-  // Pattern tile size in SVG user units — smaller = more repetitions = finer texture
-  const tileSize = textureScale;
-
-  const height = large ? 180 : 56;
-
+// Small selector card
+function BladeCard({ sword, selected, onClick }) {
   return (
     <div
-      onClick={() => onSelect(sword.name)}
+      onClick={onClick}
       style={{
-        border: `1px solid ${selected && !large ? C.amber : C.border}`,
-        background: large ? '#0a0a0a' : (selected ? '#111' : '#0d0d0d'),
-        cursor: large ? 'default' : 'pointer',
+        border: `1px solid ${selected ? C.amber : C.border}`,
+        background: selected ? '#111' : '#0d0d0d',
+        cursor: 'pointer',
+        padding: '8px 12px',
+        textAlign: 'center',
         transition: 'border-color 0.15s',
-        overflow: 'hidden',
       }}
     >
-      <svg
-        viewBox="-5 20 110 60"
-        preserveAspectRatio="xMidYMid meet"
-        style={{ width: '100%', height, display: 'block' }}
-      >
-        <defs>
-          <pattern
-            id={patternId}
-            patternUnits="userSpaceOnUse"
-            width={tileSize}
-            height={tileSize * 0.4}
-            patternTransform="rotate(-90 50 50)"
-          >
-            {textureURL && (
-              <image
-                href={textureURL}
-                width={tileSize}
-                height={tileSize * 0.4}
-                preserveAspectRatio="none"
-              />
-            )}
-          </pattern>
-        </defs>
-        <g transform="rotate(-90 50 50)">
-          {/* Blade filled with tiled damascus texture */}
-          <path
-            d={sword.blade}
-            fill={textureURL ? `url(#${patternId})` : '#333'}
-          />
-          {/* Full sword outline (handle, guard, blade edge) */}
-          <path
-            d={sword.outline}
-            fill="none"
-            stroke={large ? C.muted : C.dim}
-            strokeWidth={large ? 0.8 : 1.2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {/* Blade edge highlight */}
-          <path
-            d={sword.blade}
-            fill="none"
-            stroke="rgba(200,160,64,0.12)"
-            strokeWidth="0.4"
-          />
-        </g>
-        {/* Name label for small cards */}
-        {!large && (
-          <text
-            x="100"
-            y="75"
-            textAnchor="end"
-            style={{
-              fontSize: 5,
-              fill: selected ? C.amber : C.dim,
-              fontFamily: 'monospace',
-            }}
-          >
-            {sword.name}
-          </text>
-        )}
+      <svg viewBox={sword.vb} style={{ width: 30, height: 45, display: 'block', margin: '0 auto 4px' }}>
+        <path d={sword.outline} fill="none" stroke={selected ? C.amber : C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
+      <div style={{ fontSize: 9, fontFamily: 'monospace', color: selected ? C.amber : C.dim }}>
+        {sword.name}
+      </div>
     </div>
   );
 }
 
 export default function SwordPreview({ recipe }) {
-  const [selected, setSelected] = useState('Longsword');
-  const [textureScale, setTextureScale] = useState(40);
+  const canvasRef = useRef(null);
+  const [selected, setSelected] = useState('Chef Knife');
+  const [textureScale, setTextureScale] = useState(50);
   const activeSword = SWORDS.find(s => s.name === selected) || SWORDS[0];
 
-  // Render texture once, share across all blades
-  const textureURL = useTextureDataURL(recipe, 256);
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const tid = setTimeout(() => {
+      renderBlade(canvasRef.current, recipe, activeSword, textureScale);
+    }, 100);
+    return () => clearTimeout(tid);
+  }, [recipe, activeSword, textureScale]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-      {/* Texture scale control */}
+      {/* Texture scale slider */}
       <div style={{ maxWidth: 300 }}>
         <Slider
           label="texture scale"
           value={textureScale}
           onChange={setTextureScale}
-          min={15}
-          max={100}
-          step={1}
-          tooltip="Size of the damascus pattern on the blade. Smaller = finer grain, larger = bolder pattern."
+          min={10}
+          max={150}
+          step={5}
+          tooltip="Pattern grain size on the blade. Smaller = finer detail, larger = bolder bands."
         />
       </div>
 
-      {/* Large detail blade — full width */}
-      <HorizontalBlade
-        sword={activeSword}
-        textureURL={textureURL}
-        textureScale={textureScale}
-        selected={true}
-        onSelect={() => {}}
-        large={true}
-      />
+      {/* Large blade canvas */}
+      <div style={{
+        border: `1px solid ${C.border}`,
+        background: '#050505',
+        position: 'relative',
+      }}>
+        <canvas
+          ref={canvasRef}
+          width={960}
+          height={320}
+          style={{ width: '100%', display: 'block' }}
+        />
+      </div>
 
-      {/* Label */}
+      {/* Blade info */}
       <div style={{ textAlign: 'center', fontFamily: 'monospace' }}>
         <span style={{ fontSize: 12, color: C.amber, letterSpacing: '0.15em' }}>
           {activeSword.name}
@@ -204,21 +239,18 @@ export default function SwordPreview({ recipe }) {
         </span>
       </div>
 
-      {/* Selector strip — all blades horizontal, smaller */}
+      {/* Selector strip */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
+        gridTemplateColumns: `repeat(${SWORDS.length}, 1fr)`,
         gap: 6,
       }}>
         {SWORDS.map(sword => (
-          <HorizontalBlade
+          <BladeCard
             key={sword.name}
             sword={sword}
-            textureURL={textureURL}
-            textureScale={textureScale}
             selected={selected === sword.name}
-            onSelect={setSelected}
-            large={false}
+            onClick={() => setSelected(sword.name)}
           />
         ))}
       </div>
