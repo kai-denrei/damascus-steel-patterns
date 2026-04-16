@@ -10,6 +10,7 @@ import Gallery from './ui/Gallery.jsx';
 import StatusBar from './ui/StatusBar.jsx';
 import SwordPreview from './ui/SwordPreview.jsx';
 import Explore from './ui/Explore.jsx';
+import About from './ui/About.jsx';
 import { downloadSVG } from './engine/export-svg.js';
 import SvgViewer from './ui/SvgViewer.jsx';
 
@@ -145,6 +146,9 @@ export default function App() {
         <button style={TAB_STYLE(tab === 'swords')} onClick={() => setTab('swords')}>
           BLADES
         </button>
+        <button style={TAB_STYLE(tab === 'about')} onClick={() => setTab('about')}>
+          ABOUT
+        </button>
       </div>
 
       {tab === 'pattern' && (
@@ -190,6 +194,10 @@ export default function App() {
 
       {tab === 'swords' && (
         <SwordPreview recipe={recipe} />
+      )}
+
+      {tab === 'about' && (
+        <About />
       )}
     </div>
   );
