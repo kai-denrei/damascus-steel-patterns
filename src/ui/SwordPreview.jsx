@@ -520,17 +520,51 @@ export default function SwordPreview({ recipe }) {
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: 24, maxWidth: 600 }}>
-        <div style={{ flex: 1 }}>
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-end' }}>
+        <div style={{ flex: 1, maxWidth: 280 }}>
           <Slider label="texture scale" value={textureScale} onChange={setTextureScale}
             min={30} max={300} step={5} tooltip="Pattern grain size on the blade." />
         </div>
         {view === 'closeup' && (
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, maxWidth: 280 }}>
             <Slider label="angle" value={bladeAngle} onChange={setBladeAngle}
               min={-15} max={20} step={1} fmt={v => `${v}\u00B0`} tooltip="Blade viewing angle." />
           </div>
         )}
+        <button
+          onClick={() => {
+            if (!canvasRef.current) return;
+            // Embed recipe metadata in the filename and as a text chunk via data URL
+            const meta = JSON.stringify({
+              seed: recipe.seed,
+              pattern: recipe.pattern,
+              alloy: recipe.layers.alloy,
+              layers: recipe.layers.count,
+              view,
+              textureScale,
+              bladeAngle: view === 'closeup' ? bladeAngle : undefined,
+            });
+            // Canvas toBlob for PNG
+            canvasRef.current.toBlob((blob) => {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.download = `damascus_blade_${view}_s${recipe.seed}.png`;
+              a.href = url;
+              a.click();
+              URL.revokeObjectURL(url);
+              // Also copy metadata to clipboard for reference
+              navigator.clipboard.writeText(meta).catch(() => {});
+            }, 'image/png');
+          }}
+          style={{
+            padding: '4px 12px', fontSize: 10, letterSpacing: '0.1em',
+            fontFamily: 'monospace', background: 'transparent',
+            border: `1px solid ${C.dim}`, color: C.muted, cursor: 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          SAVE PNG
+        </button>
       </div>
 
       <div style={{ border: `1px solid ${C.border}`, background: '#0a0a0a' }}>
