@@ -77,8 +77,11 @@ export function generateSVG(recipe, width = 1920, height = 768, settings = {}) {
     }
   }
 
-  // Widely-spaced thresholds — can't interfere after smoothing
-  const NUM = Math.max(2, Math.min(12, opts.levels));
+  // Scale levels down for complex patterns to keep file size reasonable.
+  // High layer counts produce many contour lines per level — 20 levels × 96 layers = huge SVG.
+  // Budget: ~500 contour lines total. Each layer produces ~2 contours per level.
+  const maxLevels = Math.max(3, Math.min(opts.levels, Math.floor(300 / Math.max(1, recipe.layers.count))));
+  const NUM = Math.max(2, Math.min(20, maxLevels));
   const dark = alloy.dark;
   const bright = alloy.bright;
   const variationScale = opts.colorVariation / 50;
