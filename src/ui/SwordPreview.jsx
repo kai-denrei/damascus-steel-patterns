@@ -194,7 +194,7 @@ function renderTip(canvas, recipe, textureScale) {
 }
 
 // ═══════════════════════════════════════════
-// VIEW 3: Bevel — same shape as Tip but with a visible bevel/grind zone
+// VIEW 3: Bevel — base top-left, tip bottom-right, maximum diagonal length
 // ═══════════════════════════════════════════
 function renderBevel(canvas, recipe, textureScale) {
   const ctx = canvas.getContext('2d');
@@ -205,15 +205,23 @@ function renderBevel(canvas, recipe, textureScale) {
 
   const tex = makeTexture(recipe, Math.max(64, textureScale * 2));
 
-  // Same blade shape as Tip
+  // Blade runs from top-left (heel/base) to bottom-right (tip)
+  // Use the full diagonal for maximum length
   const numPts = 80;
   const spine = [], belly = [], bevelLine = [];
   for (let i = 0; i <= numPts; i++) {
-    const t = i / numPts;
-    const x = -W * 0.3 + t * W * 1.2;
-    const spineY = H * 0.25 + t * t * H * 0.2;
-    const bellyDrop = Math.sin(t * Math.PI * 0.55) * H * 0.4;
-    let bellyY = spineY + (H * 0.45 - t * t * H * 0.35) * (1 - t * 0.3) + bellyDrop * (1 - t);
+    const t = i / numPts; // 0 = heel (top-left), 1 = tip (bottom-right)
+    const x = -W * 0.08 + t * W * 1.12;
+
+    // Blade width: wide at heel, narrows to a point at tip
+    const bladeWidth = H * 0.48 * (1 - t * t * 0.97);
+
+    // Spine: slopes gently downward left-to-right
+    const spineY = H * 0.15 + t * H * 0.28;
+
+    // Belly: drops below spine by bladeWidth, with chef-knife curve
+    const bellyCurve = Math.sin(t * Math.PI * 0.6) * H * 0.12 * (1 - t);
+    let bellyY = spineY + bladeWidth + bellyCurve;
 
     if (bellyY < spineY + 2) {
       const mid = (spineY + bellyY) / 2;
@@ -223,7 +231,6 @@ function renderBevel(canvas, recipe, textureScale) {
     } else {
       spine.push([x, spineY]);
       belly.push([x, bellyY]);
-      // Bevel line: ~30% up from the belly edge toward spine
       const bevelY = bellyY - (bellyY - spineY) * 0.28;
       bevelLine.push([x, bevelY]);
     }
