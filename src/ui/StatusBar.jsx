@@ -1,9 +1,4 @@
-const C = {
-  amber: '#c8a040',
-  muted: '#706860',
-  dim: '#443c34',
-  border: '#221e18',
-};
+import { T } from './theme.js';
 
 export default function StatusBar({ recipe, renderTime, busy }) {
   const physAmp = (recipe.warp.turbulence * Math.sqrt(Math.max(1, recipe.warp.passes)) * 0.28).toFixed(3);
@@ -17,16 +12,16 @@ export default function StatusBar({ recipe, renderTime, busy }) {
       flexWrap: 'wrap',
       alignItems: 'center',
       fontSize: 10,
-      color: C.dim,
+      color: T.textDim,
       fontFamily: 'monospace',
-      borderTop: `1px solid ${C.border}`,
+      borderTop: `1px solid ${T.border}`,
       paddingTop: 6,
     }}>
-      <span>{'\u03B5'}_amp <span style={{ color: C.muted }}>{physAmp}</span></span>
-      <span>draw_ratio <span style={{ color: C.muted }}>{drawRatio}{'\u00D7'}</span></span>
-      <span>{'\u0394'}layer <span style={{ color: C.muted }}>{deltaLayer}px</span></span>
-      <span>t_render <span style={{ color: C.muted }}>{renderTime != null ? renderTime.toFixed(0) + 'ms' : '\u2014'}</span></span>
-      <span style={{ marginLeft: 'auto', letterSpacing: '0.1em', color: busy ? C.amber : C.dim }}>
+      <span>{'\u03B5'}_amp <span style={{ color: T.textDim }}>{physAmp}</span></span>
+      <span>draw_ratio <span style={{ color: T.textDim }}>{drawRatio}{'\u00D7'}</span></span>
+      <span>{'\u0394'}layer <span style={{ color: T.textDim }}>{deltaLayer}px</span></span>
+      <span>t_render <span style={{ color: T.textDim }}>{renderTime != null ? renderTime.toFixed(0) + 'ms' : '\u2014'}</span></span>
+      <span style={{ marginLeft: 'auto', letterSpacing: '0.1em', color: busy ? T.emberLow : T.textDim }}>
         {busy ? 'FORGING' : 'READY'}
       </span>
     </div>

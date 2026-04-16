@@ -1,22 +1,14 @@
 import { useState, useRef, useCallback } from 'react';
+import { T, emberColor, SLIDER_GRADIENT } from './theme.js';
 
-const C = {
-  amber: '#c8a040',
-  text: '#d8d4cc',
-  muted: '#706860',
-  dim: '#443c34',
-  border: '#221e18',
-};
-
-export default function UnicodeSlider({ label, value, onChange, min, max, step = 1, blocks = 16, tooltip, fmt }) {
+export default function UnicodeSlider({ label, value, onChange, min, max, step = 1, tooltip, fmt }) {
   const [showTip, setShowTip] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const trackRef = useRef(null);
 
   const range = max - min;
-  const normalized = (value - min) / range;
-  const filledCount = Math.round(normalized * blocks);
+  const normalized = (value - min) / range; // 0–1
 
-  // Click/drag handler using track position for precise control
   const updateFromEvent = useCallback((e) => {
     const rect = trackRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -29,9 +21,11 @@ export default function UnicodeSlider({ label, value, onChange, min, max, step =
 
   const handleMouseDown = useCallback((e) => {
     e.preventDefault();
+    setDragging(true);
     updateFromEvent(e);
     const onMove = (ev) => updateFromEvent(ev);
     const onUp = () => {
+      setDragging(false);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
@@ -40,6 +34,11 @@ export default function UnicodeSlider({ label, value, onChange, min, max, step =
   }, [updateFromEvent]);
 
   const display = fmt ? fmt(value) : (Number.isInteger(step) ? value : value.toFixed(1));
+
+  // Thumb and value color interpolate with slider position
+  const thumbColor = emberColor(normalized);
+  const valueColor = emberColor(Math.min(1, normalized * 1.2));
+  const highGlow = normalized > 0.85;
 
   return (
     <div
@@ -55,9 +54,18 @@ export default function UnicodeSlider({ label, value, onChange, min, max, step =
         gap: 10,
         height: 22,
       }}>
-        <span style={{ color: C.amber, minWidth: 80, fontSize: 10 }}>{label}</span>
+        <span style={{
+          color: dragging ? T.textPrim : T.emberLow,
+          minWidth: 80,
+          fontSize: 10,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          borderLeft: dragging ? `3px solid ${T.emberMid}` : '3px solid transparent',
+          paddingLeft: 5,
+          transition: 'border-color 0.3s, color 0.15s',
+        }}>{label}</span>
 
-        {/* Track — continuous click/drag area */}
+        {/* Track */}
         <div
           ref={trackRef}
           onMouseDown={handleMouseDown}
@@ -71,40 +79,46 @@ export default function UnicodeSlider({ label, value, onChange, min, max, step =
             userSelect: 'none',
           }}
         >
-          {/* Background bar */}
+          {/* Empty track */}
           <div style={{
             position: 'absolute',
-            left: 0,
-            right: 0,
-            height: 8,
-            background: '#161616',
-            borderRadius: 2,
-            border: `1px solid ${C.border}`,
+            left: 0, right: 0,
+            height: 3,
+            background: T.trackEmpty,
+            borderRadius: 1,
           }} />
-          {/* Filled bar */}
+          {/* Filled track with ember gradient */}
           <div style={{
             position: 'absolute',
             left: 0,
             width: `${normalized * 100}%`,
-            height: 8,
-            background: C.amber,
-            borderRadius: 2,
+            height: 3,
+            background: SLIDER_GRADIENT,
+            backgroundSize: `${100 / Math.max(0.01, normalized)}% 100%`,
+            borderRadius: 1,
+            boxShadow: highGlow ? '0 0 8px 1px rgba(255,200,100,0.2)' : 'none',
             transition: 'width 0.05s',
           }} />
-          {/* Thumb */}
+          {/* Thumb — angular, machined */}
           <div style={{
             position: 'absolute',
-            left: `calc(${normalized * 100}% - 5px)`,
-            width: 10,
+            left: `calc(${normalized * 100}% - 1.5px)`,
+            width: 3,
             height: 14,
-            background: C.amber,
-            borderRadius: 2,
-            border: '1px solid #0b0b0b',
+            background: thumbColor,
+            borderRadius: 0,
+            boxShadow: highGlow ? `0 0 6px 2px rgba(255,230,180,0.4)` : 'none',
             transition: 'left 0.05s',
           }} />
         </div>
 
-        <span style={{ color: C.text, minWidth: 40, textAlign: 'right', fontSize: 10 }}>
+        <span style={{
+          color: valueColor,
+          minWidth: 40,
+          textAlign: 'right',
+          fontSize: 10,
+          transition: 'color 0.15s',
+        }}>
           {display}
         </span>
       </div>
@@ -112,13 +126,12 @@ export default function UnicodeSlider({ label, value, onChange, min, max, step =
         <div style={{
           position: 'absolute',
           bottom: '100%',
-          left: 80,
-          right: 40,
-          background: '#1a1a1a',
-          border: `1px solid ${C.border}`,
+          left: 80, right: 40,
+          background: T.bgPanel,
+          border: `1px solid ${T.border}`,
           padding: '5px 7px',
           fontSize: 9,
-          color: C.muted,
+          color: T.textDim,
           fontFamily: 'monospace',
           lineHeight: 1.4,
           zIndex: 10,

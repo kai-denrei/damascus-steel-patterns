@@ -2,13 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { generateSVG, downloadSVG } from '../engine/export-svg.js';
 import VectorControls, { DEFAULT_VECTOR_SETTINGS } from './VectorControls.jsx';
 
-const C = {
-  amber: '#c8a040',
-  text: '#d8d4cc',
-  muted: '#706860',
-  dim: '#443c34',
-  border: '#221e18',
-};
+import { T, btnStyle } from './theme.js';
 
 export default function SvgViewer({ recipe }) {
   const containerRef = useRef(null);
@@ -103,41 +97,13 @@ export default function SvgViewer({ recipe }) {
         fontSize: 10,
         fontFamily: 'monospace',
       }}>
-        <div style={{ color: C.dim }}>
+        <div style={{ color: T.textDim }}>
           scroll to zoom &middot; drag to pan &middot; {zoom.toFixed(1)}x &middot; {sizeKB}KB{renderTime ? ` \u00B7 ${renderTime}s` : ''}
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button
-            onClick={() => setSettings(s => ({ ...s, fixAnomalies: !s.fixAnomalies }))}
-            style={{
-              padding: '3px 8px', fontSize: 10, fontFamily: 'monospace',
-              background: 'transparent',
-              border: `1px solid ${settings.fixAnomalies ? C.amber : C.dim}`,
-              color: settings.fixAnomalies ? C.amber : C.dim,
-              cursor: 'pointer',
-            }}
-          >
-            FIX
-          </button>
-          <button
-            onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
-            style={{
-              padding: '3px 8px', fontSize: 10, fontFamily: 'monospace',
-              background: 'transparent', border: `1px solid ${C.dim}`,
-              color: C.dim, cursor: 'pointer',
-            }}
-          >
-            RESET VIEW
-          </button>
-          <button
-            onClick={handleSaveSVG}
-            style={{
-              padding: '3px 8px', fontSize: 10, fontFamily: 'monospace',
-              background: 'transparent', border: `1px solid ${C.amber}`,
-              color: C.amber, cursor: 'pointer',
-            }}
-          >
-            SAVE SVG
+          <button onClick={() => setSettings(s => ({ ...s, fixAnomalies: !s.fixAnomalies }))} style={btnStyle(settings.fixAnomalies)}>FIX</button>
+          <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} style={btnStyle()}>RESET VIEW</button>
+          <button onClick={handleSaveSVG} style={btnStyle(true)}>SAVE SVG
           </button>
         </div>
       </div>
@@ -147,7 +113,7 @@ export default function SvgViewer({ recipe }) {
         ref={containerRef}
         onMouseDown={handleMouseDown}
         style={{
-          border: `1px solid ${C.border}`,
+          border: `1px solid ${T.border}`,
           overflow: 'hidden',
           cursor: dragging ? 'grabbing' : 'grab',
           height: 400,
@@ -160,7 +126,7 @@ export default function SvgViewer({ recipe }) {
             position: 'absolute', inset: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'rgba(5,5,5,0.8)', zIndex: 2,
-            color: C.amber, fontSize: 11, fontFamily: 'monospace',
+            color: T.emberLow, fontSize: 11, fontFamily: 'monospace',
             letterSpacing: '0.2em',
           }}>
             GENERATING SVG\u2026
@@ -186,7 +152,7 @@ export default function SvgViewer({ recipe }) {
 
       {zoom > 3 && (
         <div style={{
-          fontSize: 9, color: C.dim, fontFamily: 'monospace', textAlign: 'center',
+          fontSize: 9, color: T.textDim, fontFamily: 'monospace', textAlign: 'center',
         }}>
           vector curves stay smooth at any zoom
         </div>

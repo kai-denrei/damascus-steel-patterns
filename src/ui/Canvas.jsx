@@ -3,11 +3,7 @@ import { renderDamascus } from '../engine/render.js';
 import { renderDamascusVector } from '../engine/render-vector.js';
 import { BASE_WIDTH, BASE_HEIGHT } from '../recipe/schema.js';
 
-const C = {
-  amber: '#c8a040',
-  border: '#221e18',
-  dim: '#443c34',
-};
+import { T } from './theme.js';
 
 const MAX_DISPLAY_WIDTH = 960;
 
@@ -99,7 +95,7 @@ function BrailleLoader() {
           fontSize: 32,
           lineHeight: 1,
           letterSpacing: '0.08em',
-          color: C.amber,
+          color: T.emberLow,
         }}
       >
         {HELIX_FRAMES[frame]}
@@ -109,7 +105,7 @@ function BrailleLoader() {
         style={{
           fontSize: 10,
           letterSpacing: '0.3em',
-          color: C.amber,
+          color: T.emberLow,
         }}
       >
         FORGING
@@ -149,7 +145,7 @@ const Canvas = forwardRef(function Canvas({ recipe, onRenderTime, onBusyChange }
   return (
     <div style={{
       position: 'relative',
-      border: `1px solid ${C.border}`,
+      border: `1px solid ${T.border}`,
       maxWidth: MAX_DISPLAY_WIDTH,
       width: '100%',
     }}>
@@ -163,6 +159,13 @@ const Canvas = forwardRef(function Canvas({ recipe, onRenderTime, onBusyChange }
           display: 'block',
         }}
       />
+      {/* Forge vignette overlay */}
+      <div style={{
+        background: 'radial-gradient(ellipse at center, transparent 40%, rgba(8,6,4,0.55) 75%, rgba(4,3,2,0.85) 100%)',
+        pointerEvents: 'none',
+        position: 'absolute',
+        inset: 0,
+      }} />
       {busy && (
         <div style={{
           position: 'absolute',
@@ -182,7 +185,7 @@ const Canvas = forwardRef(function Canvas({ recipe, onRenderTime, onBusyChange }
           bottom: 4,
           right: 6,
           fontSize: 9,
-          color: C.dim,
+          color: T.textDim,
           fontFamily: 'monospace',
           pointerEvents: 'none',
         }}>

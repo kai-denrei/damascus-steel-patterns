@@ -1,23 +1,5 @@
 import { PRESET_NAMES, PRESET_LABELS } from '../recipe/presets.js';
-
-const C = {
-  amber: '#c8a040',
-  text: '#d8d4cc',
-  muted: '#706860',
-  dim: '#443c34',
-  border: '#221e18',
-};
-
-const btn = {
-  padding: '4px 10px',
-  fontSize: 10,
-  letterSpacing: '0.1em',
-  border: `1px solid ${C.dim}`,
-  background: 'transparent',
-  color: C.muted,
-  cursor: 'pointer',
-  fontFamily: 'monospace',
-};
+import { T, btnStyle } from './theme.js';
 
 const RESOLUTIONS = [
   { value: 1, label: '1\u00D7 (640\u00D7256)' },
@@ -32,27 +14,34 @@ export default function Header({ recipe, onPresetChange, onSeedChange, onRandomS
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'flex-end',
-      borderBottom: `1px solid ${C.border}`,
+      borderBottom: `1px solid ${T.border}`,
       paddingBottom: 10,
       flexWrap: 'wrap',
       gap: 8,
     }}>
       <div>
-        <div style={{ fontSize: 13, color: C.amber, letterSpacing: '0.2em', fontFamily: 'monospace' }}>
+        <div style={{
+          fontSize: 14, color: T.textPrim, letterSpacing: '0.15em',
+          fontFamily: "'JetBrains Mono', monospace", fontWeight: 700,
+          textTransform: 'uppercase',
+        }}>
           DAMASCUS PATTERN SIMULATOR
         </div>
-        <div style={{ fontSize: 10, color: C.dim, marginTop: 2, fontFamily: 'monospace' }}>
+        <div style={{
+          fontSize: 10, color: T.textDim, marginTop: 2,
+          fontFamily: 'monospace', letterSpacing: '0.05em',
+        }}>
           Composable Deformation Stack &middot; Perlin Domain Warp &middot; v1.0.019
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
         <select
           value={recipe.pattern}
           onChange={e => onPresetChange(e.target.value)}
           style={{
-            ...btn,
-            background: '#111',
-            color: C.text,
+            ...btnStyle(),
+            background: T.bgPanel,
+            color: T.textPrim,
             padding: '3px 6px',
           }}
         >
@@ -64,7 +53,7 @@ export default function Header({ recipe, onPresetChange, onSeedChange, onRandomS
           )}
         </select>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ fontSize: 10, color: C.dim, fontFamily: 'monospace' }}>seed</span>
+          <span style={{ fontSize: 10, color: T.textDim, fontFamily: 'monospace' }}>seed</span>
           <input
             type="number"
             value={recipe.seed}
@@ -72,25 +61,25 @@ export default function Header({ recipe, onPresetChange, onSeedChange, onRandomS
             max={999999}
             onChange={e => onSeedChange(parseInt(e.target.value, 10) || 0)}
             style={{
-              background: '#111',
-              border: `1px solid ${C.border}`,
-              color: C.text,
+              background: T.bgPanel,
+              border: `1px solid ${T.border}`,
+              color: T.textPrim,
               fontSize: 11,
               padding: '3px 6px',
               fontFamily: 'monospace',
               width: 72,
+              borderRadius: 1,
             }}
           />
         </div>
-        <button style={btn} onClick={onRandomSeed}>RNG</button>
-        {/* Resolution selector */}
+        <button style={btnStyle()} onClick={onRandomSeed}>RNG</button>
         <select
           value={recipe.resolution || 1}
           onChange={e => onResolutionChange(parseInt(e.target.value, 10))}
           style={{
-            ...btn,
-            background: '#111',
-            color: C.text,
+            ...btnStyle(),
+            background: T.bgPanel,
+            color: T.textPrim,
             padding: '3px 6px',
           }}
         >
@@ -98,32 +87,19 @@ export default function Header({ recipe, onPresetChange, onSeedChange, onRandomS
             <option key={r.value} value={r.value}>{r.label}</option>
           ))}
         </select>
-        {/* Render mode toggles */}
         <button
-          style={{
-            ...btn,
-            color: recipe.vectorMode ? C.amber : C.dim,
-            borderColor: recipe.vectorMode ? C.amber : C.dim,
-          }}
+          style={btnStyle(recipe.vectorMode)}
           onClick={() => onVectorModeChange(!recipe.vectorMode)}
-          title="Vector contour rendering — smooth anti-aliased curves via marching squares + Chaikin smoothing"
-        >
-          VEC
-        </button>
+          title="Vector contour rendering"
+        >VEC</button>
         <button
-          style={{
-            ...btn,
-            color: recipe.supersample ? C.amber : C.dim,
-            borderColor: recipe.supersample ? C.amber : C.dim,
-          }}
+          style={btnStyle(recipe.supersample)}
           onClick={() => onSupersampleChange(!recipe.supersample)}
-          title="2\u00D72 supersampling anti-aliasing — smoother layer edges, ~3\u00D7 slower (pixel mode only)"
-        >
-          SSAA
-        </button>
-        <button style={btn} onClick={onDownload}>PNG &darr;</button>
-        <button style={btn} onClick={onDownloadSVG}>SVG &darr;</button>
-        <button style={btn} onClick={onCopyRecipe}>COPY RECIPE</button>
+          title="2\u00D72 supersampling"
+        >SSAA</button>
+        <button style={btnStyle()} onClick={onDownload}>PNG &darr;</button>
+        <button style={btnStyle()} onClick={onDownloadSVG}>SVG &darr;</button>
+        <button style={btnStyle()} onClick={onCopyRecipe}>COPY RECIPE</button>
       </div>
     </div>
   );

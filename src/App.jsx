@@ -14,25 +14,9 @@ import About from './ui/About.jsx';
 import { downloadSVG } from './engine/export-svg.js';
 import SvgViewer from './ui/SvgViewer.jsx';
 
-const C = {
-  amber: '#c8a040',
-  muted: '#706860',
-  dim: '#443c34',
-  border: '#221e18',
-};
+import { T, tabStyle } from './ui/theme.js';
 
-const TAB_STYLE = (active) => ({
-  padding: '6px 16px',
-  fontSize: 10,
-  letterSpacing: '0.15em',
-  fontFamily: 'monospace',
-  background: 'transparent',
-  border: 'none',
-  borderBottom: active ? `2px solid ${C.amber}` : '2px solid transparent',
-  color: active ? C.amber : C.dim,
-  cursor: 'pointer',
-  transition: 'color 0.15s, border-color 0.15s',
-});
+const TAB_STYLE = tabStyle;
 
 export default function App() {
   const [recipe, setRecipe] = useState(() => {
@@ -104,11 +88,11 @@ export default function App() {
 
   return (
     <div style={{
-      background: '#0b0b0b',
+      background: T.bgDeep,
       minHeight: '100vh',
       padding: '16px 24px',
-      fontFamily: 'monospace',
-      color: '#d8d4cc',
+      fontFamily: "'JetBrains Mono', 'IBM Plex Mono', monospace",
+      color: T.textPrim,
       display: 'flex',
       flexDirection: 'column',
       gap: 14,
@@ -132,7 +116,7 @@ export default function App() {
       <div style={{
         display: 'flex',
         gap: 0,
-        borderBottom: `1px solid ${C.border}`,
+        borderBottom: `1px solid ${T.border}`,
       }}>
         <button style={TAB_STYLE(tab === 'pattern')} onClick={() => setTab('pattern')}>
           PATTERN

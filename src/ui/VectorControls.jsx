@@ -1,9 +1,6 @@
 import UnicodeSlider from './UnicodeSlider.jsx';
 
-const C = {
-  dim: '#443c34',
-  border: '#221e18',
-};
+import { T, sectionHeader } from './theme.js';
 
 export const DEFAULT_VECTOR_SETTINGS = {
   levels: 20,
@@ -25,11 +22,11 @@ export default function VectorControls({ settings, onChange }) {
       flexDirection: 'column',
       gap: 8,
       padding: '10px 0',
-      borderBottom: `1px solid ${C.border}`,
+      borderBottom: `1px solid ${T.border}`,
     }}>
       <div style={{
         fontSize: 10,
-        color: C.dim,
+        color: T.textDim,
         letterSpacing: '0.15em',
         fontFamily: 'monospace',
         marginBottom: 2,

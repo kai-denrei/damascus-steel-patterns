@@ -3,26 +3,13 @@ import Slider from './Slider.jsx';
 import { ALLOY_NAMES } from '../engine/alloys.js';
 import { PARAM_RANGES, TOOLTIPS } from '../recipe/schema.js';
 
-const C = {
-  amber: '#c8a040',
-  muted: '#706860',
-  dim: '#443c34',
-  border: '#221e18',
-};
+import { T, sectionHeader } from './theme.js';
 
-const secTitle = {
-  fontSize: 10,
-  color: C.dim,
-  letterSpacing: '0.15em',
-  borderBottom: `1px solid ${C.border}`,
-  paddingBottom: 4,
-  fontFamily: 'monospace',
-  marginBottom: 6,
-};
+const secTitle = sectionHeader;
 
 const expandBtn = {
   fontSize: 10,
-  color: C.dim,
+  color: T.textDim,
   background: 'transparent',
   border: 'none',
   cursor: 'pointer',
@@ -59,8 +46,8 @@ export default function Controls({ recipe, onChange }) {
     background: 'transparent',
     border: 'none',
     cursor: 'pointer',
-    color: active ? C.amber : C.muted,
-    borderLeft: active ? `1px solid ${C.amber}` : '1px solid transparent',
+    color: active ? T.emberLow : T.textDim,
+    borderLeft: active ? `1px solid ${T.emberLow}` : '1px solid transparent',
   });
 
   return (
@@ -127,7 +114,7 @@ export default function Controls({ recipe, onChange }) {
           {csExpanded ? '\u2212 advanced' : '+ advanced'}
         </button>
         {csExpanded && (
-          <div style={{ fontSize: 10, color: C.dim, fontFamily: 'monospace', fontStyle: 'italic' }}>
+          <div style={{ fontSize: 10, color: T.textDim, fontFamily: 'monospace', fontStyle: 'italic' }}>
             Additional cross-section controls planned for v2
           </div>
         )}
