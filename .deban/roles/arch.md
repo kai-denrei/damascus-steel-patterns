@@ -2,7 +2,7 @@
 role: arch
 owner: Gerald
 status: active
-last-updated: 2026-04-15
+last-updated: 2026-04-16
 ---
 
 # Architecture
@@ -22,12 +22,17 @@ System decomposition, engine/UI boundary, portability strategy (WebGL, Blender, 
 | 2026-04-15 | Three render pipelines: pixel (Canvas 2D), vector (Canvas Path2D), SVG export | Pixel mode for shading quality + live editing. Vector mode for smooth Canvas fills. SVG export for resolution-independent output + external editors. All share the same contour extraction pipeline in `contour.js`. | [[dev]] |
 | 2026-04-15 | Padded field trick for contour closure | Pad material field grid with 1 cell of zeros on all sides. Contours curve back through padding instead of terminating at boundary. Eliminates open-contour fill problem without boundary-walk algorithms. Alternative considered: walking open contour endpoints along boundary — rejected for complexity and fill-direction ambiguity. | [[dev]] |
 | 2026-04-15 | Contour smoothing: box filter (radius 4, 3 iterations) + uniform subsample (every 3rd) | Removes marching squares staircase from polyline coordinates. Subsample gives Bezier tangent computation long-range context. Alternatives rejected: Chaikin (amplify then simplify fights itself), RDP (removes wrong points from curves), raw dense polylines (tangents follow zigzag). | [[dev]] |
+| 2026-04-16 | `patternScale` viewport: `bx = (px/W) * patternScale` in render.js | Controls what portion of the billet noise field is visible. Replaces canvas-size-based scaling (which only changed pixel density) and tiling (which had seam issues). Noise is continuous beyond [0,1], so any patternScale works seamlessly. | [[dev]] |
+| 2026-04-16 | Nyquist-aware grid: `gridH = max(128, layers*4)` for SVG contour extraction | Grid must resolve the layer frequency. Auto-scales with recipe complexity. Capped at 640×1600. | [[dev]] |
+| 2026-04-16 | SVG level auto-budget: `maxLevels = 300/layerCount` | Prevents combinatorial explosion (20 levels × 96 layers). Keeps SVG ≤6MB regardless of pattern complexity. | [[dev]] |
+| 2026-04-16 | Blade texture mapping: full-canvas render + clip, not tiling | Research evaluated WebGL mesh UV mapping, SVG feDisplacementMap, Canvas triangulation, and CSS transforms. For v1: render at full blade canvas size with patternScale, clip to blade Path2D. WebGL UV mapping deferred to v2 for curvature-following. | [[dev]], [[ux]] |
 
 ## Dead Ends
 <!-- APPEND ONLY. Never delete. -->
 | Date | What was tried | Why it failed / was rejected |
 |---|---|---|
 | 2026-04-15 | Single render pipeline with toggleable AA/SSAA for smooth edges | Pixel-based rendering fundamentally can't produce smooth curves — the sigmoid threshold creates binary per-pixel decisions. No amount of supersampling or adaptive threshold tuning fixes the underlying aliasing from a sawtooth discontinuity. Required a separate vector contour pipeline. |
+| 2026-04-16 | Isoband architecture (ternary marching squares) for non-overlapping band polygons | Theoretically correct (81-case lookup, band polygons by construction). Implementation failed — ad-hoc cell polygon assembly via angle sorting doesn't work for all 81 cases. Would need a proven library (MarchingSquares.js) or exhaustive lookup table. Reverted to stacked isolines with widely-spaced thresholds. |
 
 ## Lessons
 
@@ -46,5 +51,6 @@ Feeds into: [[dev]], [[ux]]
 
 ## Session Log
 <!-- One line per session, newest first -->
+2026-04-16 — patternScale viewport in render.js. Nyquist grid auto-scaling. SVG level auto-budget. Blade texture mapping research (WebGL deferred to v2). Isoband attempt failed, reverted.
 2026-04-15 — Added 3 render pipelines (pixel/vector/SVG). Padded field trick for contour closure. Box-filter + subsample smoothing pipeline finalized after 4 failed approaches. Eng-review caught 3 blockers.
 2026-04-14 — Designed composable deformation stack architecture. Chose Approach C (presets + editable stack). Defined engine/UI boundary. Recipe schema v1 finalized. Mosaic deferred to v2.

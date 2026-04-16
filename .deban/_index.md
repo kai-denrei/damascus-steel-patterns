@@ -22,4 +22,6 @@ Browser-based damascus steel pattern simulator with a composable deformation sta
 ## Open Questions (cross-role)
 - [ ] Canvas 2D performance ceiling at 4x with raindrop N=30 — untested — since: 2026-04-14
 - [ ] Blender OSL/GLSL portability of JS-specific bitwise ops (Math.imul, >>>) — since: 2026-04-14
-- [ ] Vector mode loses color gradients/shading — smooth edges but flat fill. Need method to combine smooth vector contours with pixel shading (bump map, specular, grain). — since: 2026-04-15
+- [x] Vector mode loses color gradients/shading — PARTIALLY RESOLVED: multi-threshold contour stacking with 6-20 levels provides color gradient. feGaussianBlur softens band transitions. Full pixel shading (bump map, specular) still only via multiply composite which distorts tonal balance. — since: 2026-04-15, updated: 2026-04-16
+- [ ] WebGL UV-mapped blade texture with curvature-following — research done, deferred to v2 — since: 2026-04-16
+- [ ] Isoband implementation needs correct 81-case lookup table (from MarchingSquares.js or similar) — since: 2026-04-16
