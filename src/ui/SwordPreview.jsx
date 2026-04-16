@@ -1,6 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
 import { renderDamascus } from '../engine/render.js';
-import { makeSeamlessTile } from '../engine/seamless.js';
 import Slider from './Slider.jsx';
 
 const C = {
@@ -11,10 +10,17 @@ const C = {
   border: '#221e18',
 };
 
-function makeTexture(recipe, size) {
-  const tileW = size;
-  const tileH = Math.round(size * 0.4);
-  return makeSeamlessTile(recipe, tileW, tileH);
+// Render texture at full blade canvas size — no tiling, no seams.
+// textureScale controls the billet-to-pixel ratio (zoom level).
+function makeFullTexture(recipe, canvasW, canvasH, textureScale) {
+  const tex = document.createElement('canvas');
+  // Scale factor: textureScale maps how many pixels per "billet unit"
+  // Larger textureScale = larger pattern features = fewer layers visible
+  const scaleFactor = textureScale / 100;
+  tex.width = Math.round(canvasW / scaleFactor);
+  tex.height = Math.round(canvasH / scaleFactor);
+  renderDamascus(tex, { ...recipe, resolution: 1 });
+  return tex;
 }
 
 function applyMetallicShading(ctx, W, H, angleRad) {
@@ -122,7 +128,7 @@ function renderCloseup(canvas, recipe, textureScale, bladeAngle) {
   ctx.fillStyle = '#0a0a0a';
   ctx.fillRect(0, 0, W, H);
 
-  const tex = makeTexture(recipe, Math.max(64, textureScale * 2));
+  const tex = makeFullTexture(recipe, W * 2, H * 2, textureScale);
   const angleRad = bladeAngle * Math.PI / 180;
   const { spine, belly } = generateBladeGeometry(W, H);
 
@@ -137,8 +143,7 @@ function renderCloseup(canvas, recipe, textureScale, bladeAngle) {
   ctx.translate(cx, cy);
   ctx.rotate(angleRad);
   ctx.translate(-cx, -cy);
-  ctx.fillStyle = ctx.createPattern(tex, 'repeat');
-  ctx.fillRect(-W, -H, W * 3, H * 3);
+  ctx.drawImage(tex, -W * 0.5, -H * 0.5, W * 2, H * 2);
   ctx.restore();
   applyMetallicShading(ctx, W, H, angleRad);
   ctx.restore();
@@ -155,7 +160,7 @@ function renderTip(canvas, recipe, textureScale) {
   ctx.fillStyle = '#0a0a0a';
   ctx.fillRect(0, 0, W, H);
 
-  const tex = makeTexture(recipe, Math.max(64, textureScale * 2));
+  const tex = makeFullTexture(recipe, W, H, textureScale);
 
   // Spine on top (flatter), belly curves down, both converge at tip (right)
   const numPts = 80;
@@ -185,8 +190,7 @@ function renderTip(canvas, recipe, textureScale) {
 
   ctx.save();
   ctx.clip(bladePath);
-  ctx.fillStyle = ctx.createPattern(tex, 'repeat');
-  ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(tex, 0, 0, W, H);
   applyMetallicShading(ctx, W, H, 0);
   ctx.restore();
   drawEdgeHighlights(ctx, spine, belly);
@@ -202,7 +206,7 @@ function renderBevel(canvas, recipe, textureScale) {
   ctx.fillStyle = '#0a0a0a';
   ctx.fillRect(0, 0, W, H);
 
-  const tex = makeTexture(recipe, Math.max(64, textureScale * 2));
+  const tex = makeFullTexture(recipe, W, H, textureScale);
 
   // Blade runs from top-left (heel/base) to bottom-right (tip)
   // Use the full diagonal for maximum length
@@ -240,8 +244,7 @@ function renderBevel(canvas, recipe, textureScale) {
   // Draw main blade with texture
   ctx.save();
   ctx.clip(bladePath);
-  ctx.fillStyle = ctx.createPattern(tex, 'repeat');
-  ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(tex, 0, 0, W, H);
   applyMetallicShading(ctx, W, H, 0);
 
   // Bevel zone: darken the area between bevel line and cutting edge
@@ -301,7 +304,7 @@ function renderAnatomy(canvas, recipe, textureScale) {
   ctx.fillStyle = '#0a0a0a';
   ctx.fillRect(0, 0, W, H);
 
-  const tex = makeTexture(recipe, Math.max(64, textureScale * 2));
+  const tex = makeFullTexture(recipe, W, H, textureScale);
 
   // Full knife: point at LEFT, handle at RIGHT
   // Blade tapers from thick (right/heel) to thin (left/point)
@@ -340,8 +343,7 @@ function renderAnatomy(canvas, recipe, textureScale) {
   // Draw blade with texture
   ctx.save();
   ctx.clip(bladePath);
-  ctx.fillStyle = ctx.createPattern(tex, 'repeat');
-  ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(tex, 0, 0, W, H);
   applyMetallicShading(ctx, W, H, 0);
 
   // Bevel zone
