@@ -117,13 +117,19 @@ export function generateSVG(recipe, width = 1920, height = 768, settings = {}) {
   let defs = '<defs>\n';
   if (useBlur || useGrain) {
     defs += '<filter id="fx" x="-2%" y="-2%" width="104%" height="104%">\n';
-    if (useBlur) {
-      defs += `<feGaussianBlur stdDeviation="${blurRadius}" />\n`;
-    }
-    if (useGrain) {
+    if (useBlur && useGrain) {
+      // Blur first, then multiply with grain
+      defs += `<feGaussianBlur in="SourceGraphic" stdDeviation="${blurRadius}" result="blurred"/>\n`;
       defs += `<feTurbulence type="fractalNoise" baseFrequency="${grainFreq}" numOctaves="3" seed="${recipe.seed}" result="n"/>\n`;
       defs += '<feColorMatrix type="saturate" values="0" in="n" result="gn"/>\n';
-      defs += '<feBlend mode="multiply" in2="gn"/>\n';
+      defs += '<feBlend mode="multiply" in="blurred" in2="gn"/>\n';
+    } else if (useBlur) {
+      defs += `<feGaussianBlur in="SourceGraphic" stdDeviation="${blurRadius}"/>\n`;
+    } else {
+      // Grain only
+      defs += `<feTurbulence type="fractalNoise" baseFrequency="${grainFreq}" numOctaves="3" seed="${recipe.seed}" result="n"/>\n`;
+      defs += '<feColorMatrix type="saturate" values="0" in="n" result="gn"/>\n';
+      defs += '<feBlend mode="multiply" in="SourceGraphic" in2="gn"/>\n';
     }
     defs += '</filter>\n';
   }
