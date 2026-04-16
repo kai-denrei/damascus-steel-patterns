@@ -61,13 +61,21 @@ function bladeGeometry(W, H) {
   const spine = [], belly = [], bevelLine = [];
   for (let i = 0; i <= numPts; i++) {
     const t = i / numPts;
-    const x = -W * 0.12 + t * W * 1.02;
-    // Sharper tip: cubic taper with steeper convergence
-    const bladeWidth = H * 0.48 * Math.pow(1 - t, 1.3) * (0.15 + 0.85 * (1 - t * t * 0.5));
-    const spineY = H * 0.15 + t * H * 0.32;
-    const bellyCurve = Math.sin(t * Math.PI * 0.55) * H * 0.1 * (1 - t);
+    const x = -W * 0.15 + t * W * 1.05;
+    const bladeWidth = H * 0.48 * (1 - t * t * 0.97);
+    const spineY = H * 0.15 + t * H * 0.28;
+    const bellyCurve = Math.sin(t * Math.PI * 0.6) * H * 0.12 * (1 - t);
     let bellyY = spineY + bladeWidth + bellyCurve;
-    if (bellyY < spineY + 1.5) {
+    // Near the tip: curve spine down and belly up so they meet in a rounded point
+    if (t > 0.88) {
+      const tipT = (t - 0.88) / 0.12; // 0→1 over last 12%
+      const pinch = tipT * tipT;
+      const mid = (spineY + bellyY) / 2;
+      const curvedSpine = spineY + (mid - spineY) * pinch;
+      const curvedBelly = bellyY - (bellyY - mid) * pinch;
+      spine.push([x, curvedSpine]); belly.push([x, curvedBelly]);
+      bevelLine.push([x, curvedBelly - (curvedBelly - curvedSpine) * 0.28]);
+    } else if (bellyY < spineY + 2) {
       const mid = (spineY + bellyY) / 2;
       spine.push([x, mid]); belly.push([x, mid]); bevelLine.push([x, mid]);
     } else {
