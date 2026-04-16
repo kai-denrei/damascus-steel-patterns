@@ -384,7 +384,7 @@ function HaSection({ recipe, textureScale, vecSettings }) {
     <div style={{ padding: '16px 0' }}>
       {/* Blade selector */}
       <div style={{
-        display: 'flex', gap: 6, padding: '0 24px 12px',
+        display: 'flex', gap: 6, padding: '0 16px 12px',
         flexWrap: 'wrap', alignItems: 'center',
       }}>
         {BLADE_NAMES.map(key => {
@@ -420,7 +420,7 @@ function HaSection({ recipe, textureScale, vecSettings }) {
       </div>
 
       {/* Scale slider */}
-      <div style={{ padding: '12px 24px', maxWidth: 300 }}>
+      <div style={{ padding: '12px 16px', maxWidth: 300 }}>
         <UnicodeSlider label="texture scale" value={localScale} onChange={setLocalScale}
           min={30} max={300} step={5} tooltip="Pattern zoom on the blade." />
       </div>
@@ -451,7 +451,7 @@ function VectorSection({ recipe, textureScale, vecSettings, setVecSettings, onSa
   const deformStr = recipe.deformations.length === 0 ? 'wild' : recipe.deformations.map(d => d.type).join(' + ');
 
   return (
-    <div style={{ padding: '16px 24px' }}>
+    <div style={{ padding: '12px 16px' }}>
       <div style={{ ...sectionHeader, marginTop: 0 }}>SVG VECTOR PREVIEW</div>
 
       {/* Preview */}
@@ -477,7 +477,7 @@ function VectorSection({ recipe, textureScale, vecSettings, setVecSettings, onSa
 
       {/* Settings */}
       <div style={sectionHeader}>VECTOR SETTINGS</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px 20px', maxWidth: 800 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '8px 16px' }}>
         {[
           { key: 'levels', min: 2, max: 20, step: 1, tip: 'Color gradient bands.' },
           { key: 'detail', min: 1, max: 5, step: 1, tip: 'Grid density for contours.' },
@@ -583,21 +583,21 @@ export default function AppV2() {
 
   return (
     <div style={{
-      background: T.bgDeep, minHeight: '100vh',
+      background: T.bgDeep, minHeight: '100vh', overflowX: 'hidden',
       fontFamily: "'JetBrains Mono', 'IBM Plex Mono', monospace",
       color: T.textPrim, display: 'flex', flexDirection: 'column',
     }}>
 
       {/* ═══ Header ═══ */}
       <div style={{
-        padding: '10px 24px', display: 'flex', justifyContent: 'space-between',
+        padding: '10px 16px', display: 'flex', justifyContent: 'space-between',
         alignItems: 'center', borderBottom: `1px solid ${T.border}`,
-        maxWidth: 1100, width: '100%', margin: '0 auto',
+        maxWidth: 1100, width: '100%', margin: '0 auto', flexWrap: 'wrap', gap: 6,
       }}>
         <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-          DAMASCUS FORGE
+          DAMASCUS FORGE <span style={{ fontSize: 8, fontWeight: 400, color: T.textDim, letterSpacing: '0.05em' }}>v2.1</span>
         </div>
-        <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Forge Anew button */}
           <button
             onClick={handleForgeAnew}
@@ -621,6 +621,7 @@ export default function AppV2() {
       {/* ═══ Nav ═══ */}
       <div style={{
         display: 'flex', gap: 0, borderBottom: `1px solid ${T.border}`,
+        overflowX: 'auto', WebkitOverflowScrolling: 'touch',
         maxWidth: 1100, width: '100%', margin: '0 auto',
       }}>
         {[
@@ -680,25 +681,25 @@ export default function AppV2() {
               {deformStr} &middot; {recipe.layers.alloy} &middot; {recipe.layers.count} layers &middot; seed {recipe.seed}
             </div>
 
-            <div style={{ padding: '12px 24px', display: 'flex', gap: 20, borderBottom: `1px solid ${T.border}` }}>
-              <div style={{ flex: 1, maxWidth: 300 }}>
-                <UnicodeSlider label="texture scale" value={textureScale} onChange={setTextureScale}
-                  min={30} max={300} step={5} tooltip="Pattern zoom on the blade." />
-              </div>
-              <div style={{ flex: 1, maxWidth: 200 }}>
-                <UnicodeSlider label="seed" value={recipe.seed}
-                  onChange={v => setRecipe(r => ({ ...r, seed: v }))} min={0} max={999999} step={1} />
-              </div>
-              <div style={{ flex: 1, maxWidth: 200 }}>
-                <UnicodeSlider label="layers" value={recipe.layers.count}
-                  onChange={v => setRecipe(r => ({ ...r, layers: { ...r.layers, count: v } }))}
-                  min={4} max={96} step={1} tooltip="Layer count." />
-              </div>
+            <div style={{
+              padding: '8px 16px',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+              gap: '4px 16px',
+              borderBottom: `1px solid ${T.border}`,
+            }}>
+              <UnicodeSlider label="scale" value={textureScale} onChange={setTextureScale}
+                min={30} max={300} step={5} tooltip="Pattern zoom on the blade." />
+              <UnicodeSlider label="seed" value={recipe.seed}
+                onChange={v => setRecipe(r => ({ ...r, seed: v }))} min={0} max={999999} step={1} />
+              <UnicodeSlider label="layers" value={recipe.layers.count}
+                onChange={v => setRecipe(r => ({ ...r, layers: { ...r.layers, count: v } }))}
+                min={4} max={96} step={1} tooltip="Layer count." />
             </div>
 
-            <div style={{ padding: '12px 24px' }}>
+            <div style={{ padding: '12px 16px' }}>
               <div style={sectionHeader}>VECTOR EXPORT SETTINGS</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px 20px', maxWidth: 800 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '8px 16px' }}>
                 {[
                   { key: 'levels', min: 2, max: 20, step: 1, tip: 'Color gradient bands.' },
                   { key: 'detail', min: 1, max: 5, step: 1, tip: 'Grid density for contours.' },
@@ -720,7 +721,7 @@ export default function AppV2() {
 
         {/* ─── EXPLORE ─── */}
         {section === 'explore' && (
-          <div style={{ padding: '16px 24px' }}>
+          <div style={{ padding: '12px 16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div style={{ fontSize: 10, color: T.textDim }}>
                 click a blade to send it to BLADE view &middot; hit {'\u2692'} to re-forge all 9
