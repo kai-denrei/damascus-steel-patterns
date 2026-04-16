@@ -18,10 +18,15 @@ export function renderDamascus(canvas, recipe) {
   // Sub-pixel offsets for 2x2 SSAA (rotated grid for better coverage)
   const SS_OFFSETS = [[-0.25, -0.125], [0.25, -0.375], [-0.125, 0.375], [0.375, 0.125]];
 
+  // patternScale: 1.0 = show full [0,1] billet (default)
+  // >1 = show more of the pattern (finer features)
+  // <1 = show less (coarser, zoomed in)
+  const pScale = recipe.patternScale || 1;
+
   for (let py = 0; py < H; py++) {
     for (let px = 0; px < W; px++) {
-      const bx = px / W;
-      const by = py / H;
+      const bx = (px / W) * pScale;
+      const by = (py / H) * pScale;
       const bz = recipe.crossSection.depth + bx * Math.tan(recipe.crossSection.angle) * 0.35;
 
       let mat, matx, maty;
