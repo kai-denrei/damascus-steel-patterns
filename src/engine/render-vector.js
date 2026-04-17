@@ -6,6 +6,14 @@
 import { buildPerm, n3 } from './noise.js';
 import { ALLOYS } from './alloys.js';
 import { sampleLayerField } from './sample.js';
+import { PATTERN_MODES } from './pattern-modes.js';
+
+function sampleField(perm, bx, by, bz, recipe) {
+  const mode = recipe.patternMode || 'organic';
+  const sampler = PATTERN_MODES[mode];
+  if (sampler) return sampler(bx, by, recipe.modeParams || {}, perm);
+  return sampleField(perm, bx, by, bz, recipe);
+}
 import { sig } from './shade.js';
 import { extractContours } from './contour.js';
 
@@ -57,7 +65,7 @@ export function renderDamascusVector(canvas, recipe) {
       const bx = (gx + 0.5) / gW;
       const by = (gy + 0.5) / gH;
       const bz = recipe.crossSection.depth + bx * Math.tan(recipe.crossSection.angle) * 0.35;
-      const t = sampleLayerField(perm, bx, by, bz, recipe.warp, recipe.layers.count, recipe.deformations);
+      const t = sampleField(perm, bx, by, bz, recipe);
       matField[gy * gW + gx] = sig(t, alloy.sh);
     }
   }
@@ -105,9 +113,9 @@ export function renderDamascusVector(canvas, recipe) {
       const bx = px / W, by = py / H;
       const bz = recipe.crossSection.depth + bx * Math.tan(recipe.crossSection.angle) * 0.35;
 
-      const t = sampleLayerField(perm, bx, by, bz, recipe.warp, recipe.layers.count, recipe.deformations);
-      const tx = sampleLayerField(perm, bx + eps, by, bz, recipe.warp, recipe.layers.count, recipe.deformations);
-      const ty = sampleLayerField(perm, bx, by + eps, bz, recipe.warp, recipe.layers.count, recipe.deformations);
+      const t = sampleField(perm, bx, by, bz, recipe);
+      const tx = sampleField(perm, bx + eps, by, bz, recipe);
+      const ty = sampleField(perm, bx, by + eps, bz, recipe);
 
       const mat = sig(t, alloy.sh), matx = sig(tx, alloy.sh), maty = sig(ty, alloy.sh);
 

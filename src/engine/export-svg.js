@@ -9,6 +9,7 @@
 import { buildPerm } from './noise.js';
 import { ALLOYS } from './alloys.js';
 import { sampleLayerField } from './sample.js';
+import { PATTERN_MODES } from './pattern-modes.js';
 import { sig } from './shade.js';
 import { extractContours } from './contour.js';
 
@@ -73,7 +74,11 @@ export function generateSVG(recipe, width = 1920, height = 768, settings = {}) {
       const bx = ((gx + 0.5) / gW) * pScale;
       const by = ((gy + 0.5) / gH) * pScale;
       const bz = recipe.crossSection.depth + bx * Math.tan(recipe.crossSection.angle) * 0.35;
-      const t = sampleLayerField(perm, bx, by, bz, recipe.warp, recipe.layers.count, recipe.deformations);
+      const mode = recipe.patternMode || 'organic';
+      const sampler = PATTERN_MODES[mode];
+      const t = sampler
+        ? sampler(bx, by, recipe.modeParams || {}, perm)
+        : sampleLayerField(perm, bx, by, bz, recipe.warp, recipe.layers.count, recipe.deformations);
       matField[gy * gW + gx] = sig(t, alloy.sh);
     }
   }
