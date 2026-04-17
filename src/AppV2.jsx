@@ -697,6 +697,7 @@ export default function AppV2() {
           { id: 'ha', label: '\u5203', sub: 'blade shapes' },
           { id: 'about', label: 'ABOUT', sub: 'sources \u00B7 research' },
           { id: 'anatomy', label: 'ANATOMY', sub: 'blade reference', href: 'blade-anatomy.html' },
+          { id: 'welding', label: 'WELDING', sub: 'pattern techniques', href: 'pattern-welding.html' },
         ].map(t => t.href ? (
           <a key={t.id} href={t.href} style={{
             ...tabStyle(false),

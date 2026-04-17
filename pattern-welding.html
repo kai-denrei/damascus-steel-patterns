@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PATTERN WELDING — Damascus Forge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #0d0b09;
+  --bg-panel:    #131110;
+  --border:      #2a2520;
+  --border-mid:  #3e3830;
+  --text:        #c8b89a;
+  --text-dim:    #6b5e50;
+  --text-dimmer: #3a3028;
+  --amber:       #e8a020;
+  --amber-mid:   #b87a16;
+  --amber-dim:   #7a5010;
+  --steel:       #8a8880;
+  --dark-steel:  #3a3836;
+  --bright-steel:#c8c4bc;
+  --edge:        #d8d4cc;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.7;
+  max-width:1100px;margin:0 auto;padding:0 24px;
+}
+@media(max-width:600px){body{padding:0 14px;font-size:12px;}}
+
+/* Nav */
+.nav{display:flex;gap:0;border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.nav a,.nav span{padding:8px 14px;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;color:var(--text-dim);border-bottom:1px solid transparent;display:flex;flex-direction:column;gap:1px;white-space:nowrap;}
+.nav a:hover{color:var(--text);}
+.nav .active{color:var(--text);border-bottom-color:var(--amber);}
+.nav .sub{font-size:.48rem;color:var(--text-dimmer);letter-spacing:.02em;text-transform:none;}
+
+/* Header */
+.hdr{padding:40px 0 28px;border-bottom:1px solid var(--border);margin-bottom:56px;}
+.hdr-project{font-size:.58rem;letter-spacing:.14em;color:var(--text-dimmer);text-transform:uppercase;margin-bottom:8px;}
+.hdr h1{font-size:1.8rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);line-height:1;}
+.hdr-sub{font-size:.65rem;color:var(--text-dim);letter-spacing:.06em;margin-top:8px;}
+
+/* Sections */
+.sec{margin-bottom:72px;}
+.sec-meta{display:flex;align-items:baseline;gap:14px;margin-bottom:6px;}
+.sec-num{font-size:.55rem;letter-spacing:.16em;color:var(--amber-dim);}
+.sec-tag{font-size:.55rem;letter-spacing:.14em;color:var(--text-dimmer);text-transform:uppercase;}
+.sec-title{font-size:1rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text);padding-bottom:12px;border-bottom:1px solid var(--border);margin-bottom:24px;}
+
+/* Steel table */
+.steel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);}
+.steel-card{background:var(--bg-panel);padding:18px 20px;}
+.steel-name{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;}
+.steel-name.dark{color:var(--dark-steel);}
+.steel-name.bright{color:var(--bright-steel);}
+.steel-role{font-size:.55rem;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;}
+.steel-card p{font-size:.64rem;color:var(--text-dim);line-height:1.65;}
+.steel-card code{font-size:.6rem;color:var(--amber-mid);background:var(--bg);padding:1px 4px;border:1px solid var(--border);}
+
+/* Pattern grid */
+.pattern-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);}
+.pattern-card{background:var(--bg-panel);padding:20px;}
+.pattern-name{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);margin-bottom:4px;}
+.pattern-ops{font-size:.55rem;color:var(--amber-dim);letter-spacing:.08em;margin-bottom:10px;}
+.pattern-card p{font-size:.64rem;color:var(--text-dim);line-height:1.65;margin-bottom:8px;}
+.pattern-card ul{font-size:.62rem;color:var(--text-dim);line-height:1.8;padding-left:16px;}
+.pattern-card li{margin-bottom:2px;}
+
+/* Etch section */
+.etch-steps{counter-reset:etch;}
+.etch-step{counter-increment:etch;padding:14px 18px;border-left:2px solid var(--border);margin-bottom:12px;}
+.etch-step::before{content:counter(etch);font-size:.55rem;color:var(--amber-dim);letter-spacing:.12em;display:block;margin-bottom:4px;}
+.etch-step p{font-size:.64rem;color:var(--text-dim);line-height:1.65;}
+
+/* Sources */
+.sources{font-size:.6rem;color:var(--text-dim);line-height:2;}
+.sources a{color:var(--amber-mid);text-decoration:none;border-bottom:1px solid var(--border);}
+.sources a:hover{color:var(--amber);}
+
+/* Footer */
+.ftr{border-top:1px solid var(--border);padding:24px 0 40px;display:flex;justify-content:space-between;font-size:.55rem;color:var(--text-dimmer);letter-spacing:.1em;}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="index.html"><span>BLADE</span><span class="sub">preview · export png</span></a>
+  <a href="index.html#explore"><span>EXPLORE</span><span class="sub">roll 9 patterns</span></a>
+  <a href="index.html#vector"><span>VECTOR</span><span class="sub">export svg for blender</span></a>
+  <a href="index.html#ha"><span>刃</span><span class="sub">blade shapes</span></a>
+  <a href="blade-anatomy.html"><span>ANATOMY</span><span class="sub">blade reference</span></a>
+  <span class="active"><span>WELDING</span><span class="sub">pattern techniques</span></span>
+  <a href="index.html#about"><span>ABOUT</span><span class="sub">sources · research</span></a>
+</nav>
+
+<header class="hdr">
+  <div class="hdr-project">Damascus Forge · Reference Document</div>
+  <h1>Pattern Welding</h1>
+  <div class="hdr-sub">History · Steel Selection · Technique Taxonomy · Etching · Simulation Design</div>
+</header>
+
+
+<!-- ═══════════════════ 01 — HISTORY ═══════════════════ -->
+<section class="sec">
+  <div class="sec-meta">
+    <span class="sec-num">01 / 06</span>
+    <span class="sec-tag">Historical context</span>
+  </div>
+  <div class="sec-title">Origins</div>
+
+  <p style="font-size:.68rem;color:var(--text-dim);max-width:680px;margin-bottom:16px;">
+    Pattern welding emerged in Northern Europe from approximately <strong style="color:var(--text)">200 AD to 1000 AD</strong>, spanning the Migration Period through the Viking Age. Celtic, Germanic, and Norse smiths combined inconsistent iron blooms of varying carbon content to produce more reliable blades. The visible pattern was a byproduct of structural engineering.
+  </p>
+  <p style="font-size:.68rem;color:var(--text-dim);max-width:680px;margin-bottom:16px;">
+    <strong style="color:var(--text)">Pattern welding is not Wootz.</strong> Wootz (crucible Damascus) is a completely different metallurgical process — a single high-carbon steel ingot melted in a sealed crucible, producing carbide banding during slow cooling. Wootz originated in India circa 300 BC. The term "Damascus steel" conflates both traditions; serious bladesmiths prefer "pattern-welded steel."
+  </p>
+  <p style="font-size:.68rem;color:var(--text-dim);max-width:680px;">
+    The modern revival began in the 1970s-80s with <strong style="color:var(--text)">Bill Moran</strong> (who reintroduced Damascus to the American Bladesmith Society), <strong style="color:var(--text)">Jim Hrisoulas</strong>, and the "Montana Mafia" group. <strong style="color:var(--text)">Devin Thomas</strong> popularized the 1084/15N20 combination in the mid-1990s, establishing the modern standard.
+  </p>
+</section>
+
+
+<!-- ═══════════════════ 02 — STEELS ═══════════════════ -->
+<section class="sec">
+  <div class="sec-meta">
+    <span class="sec-num">02 / 06</span>
+    <span class="sec-tag">Material science</span>
+  </div>
+  <div class="sec-title">Steel Selection</div>
+
+  <p style="font-size:.64rem;color:var(--text-dim);max-width:680px;margin-bottom:20px;">
+    <strong style="color:var(--amber)">Manganese</strong> (not carbon) is the primary driver of dark etching. Carbon homogenizes between layers during forging — any contrast is from alloying elements. <strong style="color:var(--amber)">Nickel</strong> resists acid and stays bright.
+  </p>
+
+  <div class="steel-grid">
+    <div class="steel-card">
+      <div class="steel-name dark">1084</div>
+      <div class="steel-role">Dark Layer · Standard</div>
+      <p>Carbon <code>0.84%</code>, Manganese <code>0.75%</code>. Elevated Mn causes dark etching. The modern standard dark-layer steel. Welds at 2300-2350°F. No chromium (which would inhibit flux bonding).</p>
+    </div>
+    <div class="steel-card">
+      <div class="steel-name bright">15N20</div>
+      <div class="steel-role">Bright Layer · Standard</div>
+      <p>Carbon <code>0.75%</code>, Nickel <code>2.0%</code>. Nickel forms a passive oxide layer that resists FeCl₃ acid attack — stays bright and proud after etching. Welds at the same temperature range as 1084.</p>
+    </div>
+    <div class="steel-card">
+      <div class="steel-name dark">W2</div>
+      <div class="steel-role">Dark Layer · Alternative</div>
+      <p>Carbon <code>0.95-1.10%</code>, trace tungsten. Water-hardening. Excellent hamon potential when differentially hardened. Beautiful dark etch but less contrast than 1084.</p>
+    </div>
+    <div class="steel-card">
+      <div class="steel-name bright">L6</div>
+      <div class="steel-role">Bright Layer · Alternative</div>
+      <p>Carbon <code>0.65-0.75%</code>, Nickel <code>1.5%</code>. Lower nickel content than 15N20 gives reduced contrast but excellent toughness. Historically used in band saw blades.</p>
+    </div>
+    <div class="steel-card">
+      <div class="steel-name dark">1095</div>
+      <div class="steel-role">Dark Layer · Alternative</div>
+      <p>Carbon <code>0.95%</code>, Manganese <code>0.4%</code>. Common but lower Mn than 1084 gives less etch contrast. Very hard, takes an excellent edge.</p>
+    </div>
+    <div class="steel-card">
+      <div class="steel-name dark">O1</div>
+      <div class="steel-role">Dark Layer · Specialty</div>
+      <p>Carbon <code>0.85-1.00%</code>, Manganese <code>1.2%</code>. Very dark etch from high Mn. Oil-hardening. Risk of delayed cracking — not forgiving. For experienced smiths.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════ 03 — LAYER MATH ═══════════════════ -->
+<section class="sec">
+  <div class="sec-meta">
+    <span class="sec-num">03 / 06</span>
+    <span class="sec-tag">Mathematics</span>
+  </div>
+  <div class="sec-title">Layer Count &amp; Folding</div>
+
+  <p style="font-size:.68rem;color:var(--text-dim);max-width:680px;margin-bottom:16px;">
+    Layer count = <code style="font-size:.65rem;color:var(--amber-mid);background:var(--bg-panel);padding:2px 6px;border:1px solid var(--border);">starting layers × 2<sup>folds</sup></code>
+  </p>
+
+  <table style="font-size:.64rem;border-collapse:collapse;border:1px solid var(--border);width:100%;max-width:500px;margin-bottom:16px;">
+    <thead>
+      <tr style="border-bottom:1px solid var(--border);">
+        <th style="text-align:left;padding:8px 12px;color:var(--text-dimmer);font-weight:400;letter-spacing:.1em;font-size:.55rem;text-transform:uppercase;">Start</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-dimmer);font-weight:400;letter-spacing:.1em;font-size:.55rem;">Folds</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-dimmer);font-weight:400;letter-spacing:.1em;font-size:.55rem;">Layers</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-dimmer);font-weight:400;letter-spacing:.1em;font-size:.55rem;">Visual Result</th>
+      </tr>
+    </thead>
+    <tbody style="color:var(--text-dim);">
+      <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 12px;">7</td><td style="padding:6px 12px;">3</td><td style="padding:6px 12px;color:var(--amber);">56</td><td style="padding:6px 12px;">Bold, distinct lines</td></tr>
+      <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 12px;">7</td><td style="padding:6px 12px;">4</td><td style="padding:6px 12px;color:var(--amber);">112</td><td style="padding:6px 12px;">Intricate, clearly visible</td></tr>
+      <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 12px;">11</td><td style="padding:6px 12px;">3</td><td style="padding:6px 12px;color:var(--amber);">88</td><td style="padding:6px 12px;">Medium density</td></tr>
+      <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 12px;">15</td><td style="padding:6px 12px;">3</td><td style="padding:6px 12px;color:var(--amber);">120</td><td style="padding:6px 12px;">Optimal for twist</td></tr>
+      <tr><td style="padding:6px 12px;">7</td><td style="padding:6px 12px;">6</td><td style="padding:6px 12px;color:var(--text-dimmer);">448</td><td style="padding:6px 12px;color:var(--text-dimmer);">Fine lines, approaching limit</td></tr>
+    </tbody>
+  </table>
+
+  <p style="font-size:.62rem;color:var(--text-dimmer);max-width:680px;">
+    Beyond ~500 layers, individual bands become thinner than the etching resolution (~5-10μm) and optically disappear. "So fine it looked like static on an old TV."
+  </p>
+</section>
+
+
+<!-- ═══════════════════ 04 — TECHNIQUES ═══════════════════ -->
+<section class="sec">
+  <div class="sec-meta">
+    <span class="sec-num">04 / 06</span>
+    <span class="sec-tag">Technique taxonomy</span>
+  </div>
+  <div class="sec-title">Pattern Techniques</div>
+
+  <div class="pattern-grid">
+    <div class="pattern-card">
+      <div class="pattern-name">Random / Wild</div>
+      <div class="pattern-ops">OP-1: FOLD + OP-2: DRAW</div>
+      <p>Basic fold-and-forge with no deliberate manipulation. Organic, flowing, wood-grain-like lines. Each piece is unique. The default output of forging without intentional pattern control.</p>
+      <ul>
+        <li>Simulation: Perlin domain-warp noise (current organic mode)</li>
+        <li>Controls: layer count, fold count, turbulence</li>
+      </ul>
+    </div>
+
+    <div class="pattern-card">
+      <div class="pattern-name">Twist</div>
+      <div class="pattern-ops">OP-3: TWIST</div>
+      <p>Billet drawn to a square bar, heated, twisted along its axis using tongs/vise, then forged flat. Creates concentric spirals. Grinding deeper reveals the star center.</p>
+      <ul>
+        <li>Measured in revolutions per inch (0.5 = bold, 2 = fine)</li>
+        <li>~115-120 layers optimal. Round corners before twisting.</li>
+        <li>Two bars with opposing twist → chevron center line</li>
+        <li>Simulation: sinusoidal bands, parametric turns + grind depth</li>
+      </ul>
+    </div>
+
+    <div class="pattern-card">
+      <div class="pattern-name">Ladder</div>
+      <div class="pattern-ops">OP-4: GROOVE</div>
+      <p>Grooves pressed or ground perpendicular to the layers. When forged flat, the interrupted layers create parallel horizontal "rungs." 300+ layers recommended for crisp lines.</p>
+      <ul>
+        <li>Press method: 1/4" rods welded to die block</li>
+        <li>Grooves pressed to ~2× finished thickness</li>
+        <li>Stagger grooves between sides for better effect</li>
+        <li>Simulation: periodic Gaussian indentations</li>
+      </ul>
+    </div>
+
+    <div class="pattern-card">
+      <div class="pattern-name">Feather / Herringbone</div>
+      <div class="pattern-ops">OP-5: CUT + REARRANGE</div>
+      <p>C-shaped curves pressed into billet, split vertically, one half flipped and rewelded. The seam becomes the central spine/vein of the feather with V-chevrons radiating outward.</p>
+      <ul>
+        <li>Alternative: twist bar split + flip + reweld</li>
+        <li>200-300 layers around the central vein</li>
+        <li>The most photographed Damascus pattern</li>
+        <li>Simulation: V-fold with bilateral symmetry</li>
+      </ul>
+    </div>
+
+    <div class="pattern-card">
+      <div class="pattern-name">Raindrop</div>
+      <div class="pattern-ops">OP-4: GROOVE (radial)</div>
+      <p>Shallow dimples drilled or pressed into the billet (~1/3 thickness), then forged/ground flat. Each dimple punches through several layers, creating concentric rings when revealed.</p>
+      <ul>
+        <li>30-60 layers per side optimal (67-72 total)</li>
+        <li>Ball bearings in die blocks for uniform dimples</li>
+        <li>Deeper dimples = more concentric rings per drop</li>
+        <li>Simulation: circular Gaussian indentations</li>
+      </ul>
+    </div>
+
+    <div class="pattern-card">
+      <div class="pattern-name">Heart</div>
+      <div class="pattern-ops">OP-5: DOME + SPLIT + MIRROR</div>
+      <p>Dome pressed/ground into billet face, ground flat to reveal concentric arcs, split through center of dome, one half flipped and rewelded. Mirrored arcs create heart shape at the seam.</p>
+      <ul>
+        <li>The "dome-grind-split-reweld" technique</li>
+        <li>Split position determines heart proportions</li>
+        <li>V-notch in bottom creates the pointed base</li>
+        <li>Simulation: arched bilateral parabolas + V-base</li>
+      </ul>
+    </div>
+
+    <div class="pattern-card">
+      <div class="pattern-name">Mosaic / Turkish</div>
+      <div class="pattern-ops">OP-6: PIXEL ASSEMBLY</div>
+      <p>Contrasting steel tiles arranged in a mild-steel canister as designed pixels. Forge-welded under press. Can be re-sliced, rotated, and restacked for pattern magnification. Stars, feathers, custom images possible.</p>
+      <ul>
+        <li>Design on graph paper first — every pixel planned</li>
+        <li>3D-printed PLA cores burn out during first heat</li>
+        <li>Critical temp: 1150-1250°C (below = no bond, above = brittle)</li>
+        <li>Simulation: discrete pixel grid cross-section</li>
+      </ul>
+    </div>
+
+    <div class="pattern-card">
+      <div class="pattern-name">Cable Damascus</div>
+      <div class="pattern-ops">WIRE CONSOLIDATION</div>
+      <p>Carbon steel cable (Extra IPS, essentially 1075) forge-welded into solid steel. Pattern forms from the decarburization layer (~0.005-0.010") between every wire. Considered one of the most difficult forging jobs.</p>
+      <ul>
+        <li>Avoid galvanized cable (zinc is toxic + inhibits welding)</li>
+        <li>Saturate with borax flux before welding</li>
+        <li>Quality depends on complete wire consolidation</li>
+        <li>Visual: rope-like twisted fiber bundles</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════ 05 — ETCHING ═══════════════════ -->
+<section class="sec">
+  <div class="sec-meta">
+    <span class="sec-num">05 / 06</span>
+    <span class="sec-tag">Revealing the pattern</span>
+  </div>
+  <div class="sec-title">Ferric Chloride Etching</div>
+
+  <p style="font-size:.68rem;color:var(--text-dim);max-width:680px;margin-bottom:20px;">
+    The blade <strong style="color:var(--text)">must be hardened and tempered</strong> before etching. You will not get good contrast on annealed or normalized steel.
+  </p>
+
+  <div class="etch-steps" style="max-width:600px;">
+    <div class="etch-step"><p><strong style="color:var(--text)">Surface prep</strong> — Sand to 400-600 grit. Do not buff. Clean with acetone.</p></div>
+    <div class="etch-step"><p><strong style="color:var(--text)">Solution</strong> — 50/50 ferric chloride and <em>distilled</em> water. Never tap water. Distilled must be &lt;1 year old.</p></div>
+    <div class="etch-step"><p><strong style="color:var(--text)">Submersion</strong> — Suspend on wire, don't touch container bottom. Brush with soft toothbrush at 1-min intervals. ~10 minutes total.</p></div>
+    <div class="etch-step"><p><strong style="color:var(--text)">Neutralize</strong> — Baking soda solution for 10 minutes. Spray with Windex (ammonia ensures complete neutralization).</p></div>
+    <div class="etch-step"><p><strong style="color:var(--text)">Polish</strong> — 2000-grit on flats to brighten raised nickel layers while keeping etched valleys dark.</p></div>
+    <div class="etch-step"><p><strong style="color:var(--text)">Coffee soak</strong> — Optional: strong instant coffee overnight for dramatically darker carbon-steel layers.</p></div>
+    <div class="etch-step"><p><strong style="color:var(--text)">Repeat</strong> — 3 cycles of 10-min etch with oxide removal for best contrast.</p></div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════ 06 — SIMULATOR ═══════════════════ -->
+<section class="sec">
+  <div class="sec-meta">
+    <span class="sec-num">06 / 06</span>
+    <span class="sec-tag">Future: billet builder</span>
+  </div>
+  <div class="sec-title">Simulation Design · Phase 2</div>
+
+  <p style="font-size:.68rem;color:var(--text-dim);max-width:680px;margin-bottom:16px;">
+    The current simulator generates patterns via mathematical functions that approximate each technique's output. Phase 2 will introduce a <strong style="color:var(--amber)">Billet Builder</strong> — a playful interface where the user constructs a virtual billet from scratch:
+  </p>
+
+  <div style="font-size:.65rem;color:var(--text-dim);max-width:680px;line-height:1.8;margin-bottom:24px;padding-left:2px;">
+    <strong style="color:var(--text);">1. Draw</strong> — Sketch or select steel pieces (1084 dark, 15N20 bright) on a cross-section grid.<br>
+    <strong style="color:var(--text);">2. Stack</strong> — Arrange alternating layers. Choose starting layer count and steel ratio.<br>
+    <strong style="color:var(--text);">3. Operate</strong> — Apply forging operations in sequence: fold, draw, twist, groove, cut-and-rearrange.<br>
+    <strong style="color:var(--text);">4. Preview</strong> — See intermediate results after each operation. The billet state machine tracks layer geometry.<br>
+    <strong style="color:var(--text);">5. Reveal</strong> — Grind at a chosen depth to see the final pattern. Adjust grind depth with a slider.<br>
+    <strong style="color:var(--text);">6. Etch</strong> — Apply virtual FeCl₃ etching with contrast and depth controls.<br>
+    <strong style="color:var(--text);">7. Export</strong> — Send the revealed pattern to the blade renderer or export as SVG/PNG.
+  </div>
+
+  <p style="font-size:.62rem;color:var(--text-dimmer);max-width:680px;">
+    Architecture: the billet state is a 2D array of layer boundaries. Each operation transforms the array. The renderer computes which layer is visible at each pixel by checking which boundaries the grind depth falls between. This maps directly to the Operation Taxonomy documented in <em>damascus-pattern-physics.md</em>.
+  </p>
+</section>
+
+
+<!-- Sources -->
+<section class="sec">
+  <div class="sec-title" style="font-size:.8rem;">Sources</div>
+  <div class="sources">
+    <a href="https://knifesteelnerds.com/2025/02/12/is-1084-15n20-the-best-pattern-welded-damascus/">Knife Steel Nerds — 1084/15N20 Analysis</a><br>
+    <a href="https://damascussteelbuy.com/1084-15n20-damascus-combination-modern-standard/">Damascus Steel Buy — Modern Standard</a><br>
+    <a href="https://damascussteelbuy.com/patterns-explained/">Damascus Steel Buy — Patterns Explained</a><br>
+    <a href="https://www.provos.org/p/pattern-welding-explained/">Niels Provos — Pattern Welding Explained</a><br>
+    <a href="https://setitallonfire.com/2022/07/20/intro-to-pattern-welded-steel-damascus/">Set It All On Fire — Intro to Pattern Welded Steel</a><br>
+    <a href="https://nobliecustomknives.com/types-of-damascus-steel/">Noblie — Types of Damascus Steel</a><br>
+    <a href="https://nobliecustomknives.com/mosaic-damascus-patterns/">Noblie — Mosaic Damascus Patterns</a><br>
+    <a href="https://vegasforge.com/blogs/how-tos/how-to-etch-stainless-carbon-damascus">Vegas Forge — How to Etch Damascus</a><br>
+    <a href="https://brutedeforge.com/articles/forge-welding-explained-cable-damascus/">BRUTE de FORGE — Cable Damascus</a><br>
+    <a href="https://www.americanbladesmith.org/community/pattern-welded-blades/ladder-patterns/">ABS — Ladder Patterns</a><br>
+    <a href="https://en.wikipedia.org/wiki/Pattern_welding">Wikipedia — Pattern Welding</a><br>
+    <a href="https://blademag.com/knifemaking/how-to-create-damascus-patterns">BLADE Magazine — How to Create Patterns</a><br>
+  </div>
+</section>
+
+<footer class="ftr">
+  <span>DAMASCUS FORGE · PATTERN WELDING REFERENCE · v0.1</span>
+  <span>2026</span>
+</footer>
+
+</body>
+</html>

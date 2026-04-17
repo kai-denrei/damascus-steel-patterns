@@ -14,6 +14,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         v1: resolve(__dirname, 'v1.html'),
         anatomy: resolve(__dirname, 'blade-anatomy.html'),
+        welding: resolve(__dirname, 'pattern-welding.html'),
       },
     },
   },
