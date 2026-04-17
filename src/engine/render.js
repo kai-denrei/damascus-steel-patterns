@@ -12,7 +12,7 @@ function sampleField(perm, bx, by, bz, recipe) {
     return sampler(bx, by, recipe.modeParams || {}, perm);
   }
   // Default: organic (existing Perlin domain-warp)
-  return sampleField(perm, bx, by, bz, recipe);
+  return sampleLayerField(perm, bx, by, bz, recipe.warp, recipe.layers.count, recipe.deformations);
 }
 
 export function renderDamascus(canvas, recipe) {
