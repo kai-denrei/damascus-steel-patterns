@@ -601,19 +601,30 @@ export default function AppV2() {
     }
   }, [section]);
 
-  const handleSavePNG = useCallback(() => {
+  const handleSavePNG = useCallback(async () => {
     if (!canvasRef.current) return;
-    canvasRef.current.toBlob((blob) => {
+    const filename = `damascus_blade_s${recipe.seed}.png`;
+
+    canvasRef.current.toBlob(async (blob) => {
+      // Mobile: use Web Share API for native "Save Image" flow
+      if (navigator.share && navigator.canShare) {
+        try {
+          const file = new File([blob], filename, { type: 'image/png' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ title: 'Damascus Blade', files: [file] });
+            return;
+          }
+        } catch (e) {
+          if (e.name === 'AbortError') return; // user cancelled
+        }
+      }
+      // Desktop fallback: direct download
       const a = document.createElement('a');
-      a.download = `damascus_blade_s${recipe.seed}.png`;
+      a.download = filename;
       a.href = URL.createObjectURL(blob); a.click();
       URL.revokeObjectURL(a.href);
     }, 'image/png');
-    navigator.clipboard.writeText(JSON.stringify({
-      seed: recipe.seed, pattern: recipe.pattern, alloy: recipe.layers.alloy,
-      layers: recipe.layers.count, textureScale,
-    })).catch(() => {});
-  }, [recipe, textureScale]);
+  }, [recipe]);
 
   const handleSaveSVG = useCallback(() => {
     downloadSVG({ ...recipe, patternScale: textureScale / 100 }, 1920, 768, vecSettings);
