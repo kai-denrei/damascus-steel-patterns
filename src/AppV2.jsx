@@ -649,27 +649,34 @@ export default function AppV2() {
 
       {/* ═══ Header ═══ */}
       <div style={{
-        padding: '10px 16px', display: 'flex', justifyContent: 'space-between',
+        padding: '8px 16px', display: 'flex', justifyContent: 'space-between',
         alignItems: 'center', borderBottom: `1px solid ${T.border}`,
         maxWidth: 1100, width: '100%', margin: '0 auto', flexWrap: 'wrap', gap: 6,
       }}>
-        <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-          DAMASCUS FORGE <span style={{ fontSize: 8, fontWeight: 400, color: T.textDim, letterSpacing: '0.05em' }}>v2.3</span>
+        {/* Title — always two lines */}
+        <div style={{ lineHeight: 1.1 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>DAMASCUS</div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+            FORGE <span style={{ fontSize: 6, fontWeight: 400, color: T.textDim, letterSpacing: '0.03em', verticalAlign: 'middle' }}>v2.3</span>
+          </div>
         </div>
+
         <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Forge Anew button */}
+          {/* Forge Anew — tall, matches title height */}
           <button
             onClick={handleForgeAnew}
             title="Forge Anew"
             style={{
               ...btnStyle(),
-              fontSize: 18,
-              padding: '2px 10px',
+              fontSize: 22,
+              padding: '4px 14px',
               lineHeight: 1,
+              height: 40,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.2s',
             }}
-            onMouseEnter={e => { e.target.style.fontSize = '12px'; e.target.textContent = '\u2692 Forge Anew'; e.target.style.color = T.emberLow; e.target.style.borderColor = T.emberLow; }}
-            onMouseLeave={e => { e.target.style.fontSize = '18px'; e.target.textContent = '\u2692'; e.target.style.color = T.textDim; e.target.style.borderColor = T.border; }}
+            onMouseEnter={e => { e.target.style.fontSize = '11px'; e.target.textContent = '\u2692 Forge Anew'; e.target.style.color = T.emberLow; e.target.style.borderColor = T.emberLow; }}
+            onMouseLeave={e => { e.target.style.fontSize = '22px'; e.target.textContent = '\u2692'; e.target.style.color = T.textDim; e.target.style.borderColor = T.border; }}
           >{'\u2692'}</button>
 
           {section === 'blade' && <button style={btnStyle()} onClick={handleSavePNG}>PNG &darr;</button>}
