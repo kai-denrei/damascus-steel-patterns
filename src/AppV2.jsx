@@ -4,7 +4,7 @@ import { encodeRecipeToHash, decodeRecipeFromHash } from './recipe/url.js';
 import { renderDamascus } from './engine/render.js';
 import { generateSVG, downloadSVG } from './engine/export-svg.js';
 import { ALLOY_NAMES } from './engine/alloys.js';
-import { T, btnStyle, tabStyle, sectionHeader } from './ui/theme.js';
+import { T, btnStyle, tabStyle, sectionHeader, SLIDER_GRADIENT } from './ui/theme.js';
 import UnicodeSlider from './ui/UnicodeSlider.jsx';
 import { DEFAULT_VECTOR_SETTINGS } from './ui/VectorControls.jsx';
 import About from './ui/About.jsx';
@@ -510,6 +510,7 @@ export default function AppV2() {
   const [vecSettings, setVecSettings] = useState(DEFAULT_VECTOR_SETTINGS);
   const [section, setSection] = useState('blade');
   const [renderQuality, setRenderQuality] = useState('vector'); // 'pixel' | 'rendering' | 'vector'
+  const [estimatedTime, setEstimatedTime] = useState(0); // seconds
   const canvasRef = useRef(null);
   const vectorTimerRef = useRef(null);
 
@@ -562,6 +563,12 @@ export default function AppV2() {
     let cancelled = false;
     vectorTimerRef.current = setTimeout(async () => {
       if (cancelled) return;
+      // Estimate render time from complexity
+      const layers = recipe.modeParams?.layers || recipe.layers?.count || 32;
+      const levels = vecSettings.levels || 10;
+      const detail = vecSettings.detail || 2;
+      const est = Math.max(1, (layers * levels * detail * detail) / 800);
+      setEstimatedTime(Math.min(est, 20));
       setRenderQuality('rendering');
       await renderBlade(canvasRef.current, recipe, textureScale, vecSettings);
       if (!cancelled) setRenderQuality('vector');
@@ -646,6 +653,8 @@ export default function AppV2() {
       fontFamily: "'JetBrains Mono', 'IBM Plex Mono', monospace",
       color: T.textPrim, display: 'flex', flexDirection: 'column',
     }}>
+
+      <style>{`@keyframes fillBar { from { width: 0% } to { width: 100% } }`}</style>
 
       {/* ═══ Header ═══ */}
       <div style={{
@@ -734,9 +743,24 @@ export default function AppV2() {
               }} />
               {renderQuality === 'rendering' && (
                 <div style={{
-                  position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'rgba(13,11,9,0.35)', fontSize: 10, color: T.emberLow, letterSpacing: '0.15em',
-                }}>refining\u2026</div>
+                  position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center', gap: 10,
+                  background: 'rgba(13,11,9,0.35)',
+                }}>
+                  <span style={{ fontSize: 10, color: T.emberLow, letterSpacing: '0.15em' }}>
+                    refining ~{estimatedTime.toFixed(0)}s
+                  </span>
+                  <div style={{
+                    width: 120, height: 3, background: T.trackEmpty,
+                    borderRadius: 1, overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      height: '100%', borderRadius: 1,
+                      background: SLIDER_GRADIENT,
+                      animation: `fillBar ${estimatedTime}s ease-out forwards`,
+                    }} />
+                  </div>
+                </div>
               )}
               {renderQuality === 'pixel' && (
                 <div style={{
